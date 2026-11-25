@@ -22,10 +22,12 @@
 
   <section class="shots" aria-roledescription="carousel" aria-label="Screenshots">
     <button class="shot-nav prev" aria-label="Previous screenshot"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
-    <div class="shot-track" id="track" dir="ltr" tabindex="0">
-      <figure class="shot"><img src="images/screen-bedroom.png" alt="חדר שינה מעוצב במשחק" width="1200" height="760" loading="lazy"><figcaption data-t="cap1">מעצבים חדר שינה, מילה אחרי מילה</figcaption></figure>
-      <figure class="shot"><img src="images/screen-park.png" alt="פארק מעוצב במשחק" width="1200" height="760" loading="lazy"><figcaption data-t="cap2">בונים פארק, ונותנים לאנשים פעולות במשפטים</figcaption></figure>
-      <figure class="shot"><img src="images/screen-task.png" alt="משימת מילה במשחק" width="1200" height="760" loading="lazy"><figcaption data-t="cap3">כל חפץ נפתח במשימה קטנה באנגלית</figcaption></figure>
+    <div class="shot-view" id="view" dir="ltr" tabindex="0">
+      <div class="shot-strip" id="strip">
+        <figure class="shot"><img src="images/screen-bedroom.png" alt="חדר שינה מעוצב במשחק" width="1200" height="760"><figcaption data-t="cap1">מעצבים חדר שינה, מילה אחרי מילה</figcaption></figure>
+        <figure class="shot"><img src="images/screen-park.png" alt="פארק מעוצב במשחק" width="1200" height="760"><figcaption data-t="cap2">בונים פארק, ונותנים לאנשים פעולות במשפטים</figcaption></figure>
+        <figure class="shot"><img src="images/screen-task.png" alt="משימת מילה במשחק" width="1200" height="760"><figcaption data-t="cap3">כל חפץ נפתח במשימה קטנה באנגלית</figcaption></figure>
+      </div>
     </div>
     <button class="shot-nav next" aria-label="Next screenshot"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5l7 7-7 7" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
     <div class="dots" role="tablist"></div>
@@ -33,7 +35,7 @@
 
   <p class="land-note" data-t="note">חינם, בלי הרשמה ובלי אימייל. עובד במחשב ובטלפון.</p>
 </main>
-<footer class="land-foot"><span data-t="by">משחק של אביגיל פרייס</span></footer>
+<footer class="land-foot"><p data-t="by">משחק מאת אביגיל פרייס</p><p class="small" data-t="rights">כל הזכויות שמורות 2026 ©</p></footer>
 
 <script type="module">
 import { logoHTML } from './js/logo.js';
@@ -41,12 +43,12 @@ document.getElementById('logo').innerHTML = logoHTML();
 
 const TEXT = {
   he: { tagline: 'מעצבים חדרים ועולמות ולומדים אנגלית תוך כדי', start: 'להתחיל לשחק', note: 'חינם, בלי הרשמה ובלי אימייל. עובד במחשב ובטלפון.',
-        cap1: 'מעצבים חדר שינה, מילה אחרי מילה', cap2: 'בונים פארק, ונותנים לאנשים פעולות במשפטים', cap3: 'כל חפץ נפתח במשימה קטנה באנגלית', by: 'משחק של אביגיל פרייס' },
+        cap1: 'מעצבים חדר שינה, מילה אחרי מילה', cap2: 'בונים פארק, ונותנים לאנשים פעולות במשפטים', cap3: 'כל חפץ נפתח במשימה קטנה באנגלית', by: 'משחק מאת אביגיל פרייס', rights: 'כל הזכויות שמורות 2026 ©' },
   en: { tagline: 'Design rooms and worlds, and learn English along the way', start: 'Start playing', note: 'Free, no sign-up, no email. Works on computer and phone.',
-        cap1: 'Design a bedroom, word by word', cap2: 'Build a park and give people actions with sentences', cap3: 'Every item opens with a small English task', by: 'A game by Avigail Price' },
+        cap1: 'Design a bedroom, word by word', cap2: 'Build a park and give people actions with sentences', cap3: 'Every item opens with a small English task', by: 'A game by Avigail Price', rights: '© 2026 All rights reserved' },
 };
 let lang = 'he';
-try { const s = JSON.parse(localStorage.getItem('wordcraft.v1') || '{}'); if (s.ui) lang = s.ui; } catch {}
+try { const s = JSON.parse(localStorage.getItem('wordcraft.v2') || '{}'); if (s.ui) lang = s.ui; } catch {}
 function setLang(l) {
   lang = l;
   document.documentElement.lang = l;
@@ -59,19 +61,39 @@ document.querySelectorAll('[data-lang]').forEach((b) => { b.onclick = () => setL
 setLang(lang);
 
 // Screenshots: one at a time, swipe or tap the arrows (no auto-play).
-const track = document.getElementById('track');
-const shots = [...track.children];
+// The strip loops forward: after the last picture, the first one comes in from the right.
+const view = document.getElementById('view');
+const strip = document.getElementById('strip');
+const real = [...strip.children];
+const n = real.length;
+strip.appendChild(real[0].cloneNode(true));
+strip.insertBefore(real[n - 1].cloneNode(true), real[0]);
+strip.querySelectorAll('figure').forEach((f, i) => { if (i === 0 || i === n + 1) f.setAttribute('aria-hidden', 'true'); });
+let pos = 1, busy = false;
 const dots = document.querySelector('.dots');
-dots.innerHTML = shots.map((_, i) => `<button role="tab" aria-label="${i + 1}"></button>`).join('');
-const go = (i) => { i = (i + shots.length) % shots.length; track.scrollTo({ left: shots[i].offsetLeft - track.offsetLeft, behavior: 'smooth' }); };
-const current = () => Math.round(track.scrollLeft / track.clientWidth);
-const mark = () => [...dots.children].forEach((d, i) => d.setAttribute('aria-selected', i === current()));
-track.addEventListener('scroll', () => requestAnimationFrame(mark));
-document.querySelector('.shot-nav.prev').onclick = () => go(current() - 1);
-document.querySelector('.shot-nav.next').onclick = () => go(current() + 1);
-[...dots.children].forEach((d, i) => { d.onclick = () => go(i); });
-track.addEventListener('keydown', (e) => { if (e.key === 'ArrowLeft') go(current() - 1); if (e.key === 'ArrowRight') go(current() + 1); });
-mark();
+dots.innerHTML = real.map((_, i) => `<button role="tab" aria-label="${i + 1}"></button>`).join('');
+function place(anim) {
+  strip.style.transition = anim ? 'transform .45s ease' : 'none';
+  strip.style.transform = `translateX(${-pos * 100}%)`;
+  const cur = (pos - 1 + n) % n;
+  [...dots.children].forEach((d, i) => d.setAttribute('aria-selected', i === cur));
+}
+function go(step) { if (busy) return; busy = true; pos += step; place(true); }
+strip.addEventListener('transitionend', () => {
+  if (pos === n + 1) pos = 1;
+  if (pos === 0) pos = n;
+  place(false);
+  busy = false;
+});
+document.querySelector('.shot-nav.prev').onclick = () => go(-1);
+document.querySelector('.shot-nav.next').onclick = () => go(1);
+[...dots.children].forEach((d, i) => { d.onclick = () => { if (!busy && i + 1 !== pos) { busy = true; pos = i + 1; place(true); } }; });
+view.addEventListener('keydown', (e) => { if (e.key === 'ArrowLeft') go(-1); if (e.key === 'ArrowRight') go(1); });
+let sx = null;
+view.addEventListener('pointerdown', (e) => { sx = e.clientX; });
+view.addEventListener('pointerup', (e) => { if (sx === null) return; const dx = e.clientX - sx; sx = null; if (Math.abs(dx) > 40) go(dx < 0 ? 1 : -1); });
+view.addEventListener('pointercancel', () => { sx = null; });
+place(false);
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js').catch(() => {});
 </script>
 </body>

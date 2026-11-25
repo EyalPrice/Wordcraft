@@ -1,6 +1,6 @@
 // Wordcraft – main game screen.
-import { ART, PEOPLE_ART, DRESS_ART, SKINS, characterBase, svg } from './art.js';
-import { PLACES, ITEMS, COLORS, ACTIONS, FEELINGS, RANKS, itemsFor, itemById, placeById } from './data.js';
+import { ART, PEOPLE_ART, DRESS_ART, ACCESSORIES, SKINS, HAIR_COLORS, characterBase, svg, shade } from './art.js';
+import { PLACES, FUTURE_PLACES, ITEMS, COLORS, TEXTURES, TEXTURE_NAMES, ACTIONS, FEELINGS, RANKS, itemsFor, itemById, placeById, catOf } from './data.js';
 import { STR } from './i18n.js';
 import { sfx, setSound } from './sound.js';
 import { say } from './speech.js';
@@ -14,24 +14,54 @@ const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&l
 const rand = (a) => a[Math.floor(Math.random() * a.length)];
 
 const SKY = ['cloud', 'sun', 'kite', 'bird', 'butterfly'];
-const WALL = ['window', 'curtain', 'picture', 'clock', 'mirror'];
+const WALL = ['window', 'curtain', 'picture', 'poster', 'clock', 'mirror'];
+
+// Dress-up character placement inside the 4:3 scene (character box is 200x420).
+const CH = { w: 0.94 * 0.75 * (200 / 420) * 100, top: 3, h: 94 };
+CH.left = 50 - CH.w / 2;
 
 let view = { place: null, cat: null, sel: null };
 
-// ---------- art helpers ----------
+// ---------- art ----------
 function artFor(item, inst = {}) {
   const color = inst.color || item.color;
-  if (item.person) return svg(PEOPLE_ART[item.person](color, inst.skin || SKINS[1]));
+  if (item.person) return svg(PEOPLE_ART[item.person](color, inst.skin || SKINS[2], inst.hair || HAIR_COLORS[0]));
+  if (item.acc) { const a = DRESS_ART[item.acc[inst.v || 0]]; return svg(a.d(color), a.box); }
   if (item.dress) {
     const d = DRESS_ART[item.dress[inst.v || 0]];
+    if (d.slot === 'hair') return svg((d.back ? d.back(color) : '') + '<ellipse cx="100" cy="62" rx="27" ry="33" fill="#E8DACB"/>' + d.d(color), '40 0 120 160');
     return svg((d.back ? d.back(color) : '') + d.d(color), d.box);
   }
   return svg(ART[item.art[inst.v || 0]](color));
 }
-const variantsOf = (item) => (item.art || item.dress || [null]).length;
+const variantsOf = (item) => (item.art || item.dress || item.acc || [null]).length;
 const isLocked = (item) => item.rare && !state.unlocked.includes(item.id);
 const prizeRank = (id) => RANKS.findIndex((r) => r.prize === id);
-const topicOf = (placeId) => placeId;
+
+// ---------- textures (CSS backgrounds made from small SVG tiles) ----------
+const tile = (w, h, body) => `url("data:image/svg+xml,${encodeURIComponent(`<svg xmlns='http://www.w3.org/2000/svg' width='${w}' height='${h}'>${body}</svg>`)}")`;
+function texBG(tex, c) {
+  const d = shade(c, -9), d2 = shade(c, -18), l = shade(c, 10);
+  switch (tex) {
+    case 'stripes': return `repeating-linear-gradient(90deg, ${c} 0 26px, ${l} 26px 52px)`;
+    case 'dots': return `${tile(28, 28, `<circle cx='14' cy='14' r='3.4' fill='${d}'/>`)}, ${c}`;
+    case 'bricks': return `${tile(60, 32, `<rect width='60' height='32' fill='${c}'/><path d='M0 0.5H60M0 16.5H60M30 0V16M0 16V32M60 16V32' stroke='${d2}' stroke-width='2'/><rect x='2' y='3' width='26' height='11' fill='${l}' opacity='.35'/><rect x='32' y='19' width='26' height='11' fill='${l}' opacity='.25'/>`)}`;
+    case 'wood': return `${tile(120, 30, `<rect width='120' height='30' fill='${c}'/><path d='M0 29.5H120' stroke='${d2}' stroke-width='1.6'/><path d='M70 0V30' stroke='${d}' stroke-width='1.2'/><path d='M8 10Q30 6 52 12M80 18Q96 14 114 20' stroke='${d}' stroke-width='1' fill='none'/>`)}`;
+    case 'checks': return `${tile(40, 40, `<rect width='40' height='40' fill='${c}'/><rect width='20' height='20' fill='${d}'/><rect x='20' y='20' width='20' height='20' fill='${d}'/>`)}`;
+    case 'flowers': return `${tile(48, 48, `<rect width='48' height='48' fill='${c}'/><g fill='${l}'><circle cx='12' cy='8' r='3'/><circle cx='16' cy='12' r='3'/><circle cx='12' cy='16' r='3'/><circle cx='8' cy='12' r='3'/></g><circle cx='12' cy='12' r='2' fill='${d2}'/><g fill='${d}'><circle cx='36' cy='32' r='2.4'/><circle cx='39' cy='35' r='2.4'/><circle cx='36' cy='38' r='2.4'/><circle cx='33' cy='35' r='2.4'/></g>`)}`;
+    case 'waves': return `${tile(60, 24, `<rect width='60' height='24' fill='${c}'/><path d='M0 12Q15 2 30 12T60 12' stroke='${d}' stroke-width='2.4' fill='none'/>`)}`;
+    case 'tiles': return `${tile(46, 46, `<rect width='46' height='46' fill='${c}'/><rect x='1.5' y='1.5' width='43' height='43' rx='2' fill='${l}' opacity='.35' stroke='${d2}' stroke-width='1.4'/>`)}`;
+    case 'carpet': return `${tile(12, 12, `<rect width='12' height='12' fill='${c}'/><circle cx='3' cy='4' r='.9' fill='${d}'/><circle cx='9' cy='9' r='.9' fill='${l}'/>`)}`;
+    case 'stone': return `${tile(80, 50, `<rect width='80' height='50' fill='${c}'/><path d='M0 22L26 18L40 26L80 20M26 18L22 0M40 26L36 50M60 22L64 50' stroke='${d2}' stroke-width='1.6' fill='none'/>`)}`;
+    case 'sunset': return `linear-gradient(to bottom, ${shade(c, -10)} 0%, ${c} 40%, #F7B58A 80%, #F59A7A 100%)`;
+    case 'night': return `${tile(90, 70, `<circle cx='12' cy='14' r='1.1' fill='#fff'/><circle cx='54' cy='8' r='1.4' fill='#fff'/><circle cx='76' cy='40' r='1' fill='#fff'/><circle cx='30' cy='52' r='1.2' fill='#fff'/>`)}, linear-gradient(to bottom, #0F1D3A, #26406E)`;
+    case 'clouds': return `${tile(220, 120, `<g fill='#fff' opacity='.75'><ellipse cx='50' cy='40' rx='34' ry='12'/><ellipse cx='70' cy='32' rx='22' ry='12'/><ellipse cx='170' cy='86' rx='30' ry='10'/></g>`)}, ${c}`;
+    case 'sand': return `${tile(14, 14, `<rect width='14' height='14' fill='#E8D29A'/><circle cx='4' cy='5' r='.8' fill='#C9AE6E'/><circle cx='10' cy='10' r='.7' fill='#F6E6BC'/>`)}`;
+    case 'asphalt': return `${tile(16, 16, `<rect width='16' height='16' fill='${c}'/><circle cx='4' cy='4' r='.8' fill='${l}'/><circle cx='11' cy='12' r='.7' fill='${d}'/>`)}`;
+    case 'dirt': return `${tile(30, 20, `<rect width='30' height='20' fill='#A67B52'/><ellipse cx='8' cy='6' rx='3' ry='1.4' fill='#8C6440'/><ellipse cx='22' cy='15' rx='2.4' ry='1.2' fill='#BF946A'/>`)}`;
+    default: return c;
+  }
+}
 
 // ---------- top-level render ----------
 function render() {
@@ -70,7 +100,7 @@ function bindHeader() {
 function renderHome() {
   const cards = PLACES.map((p) => {
     const w = state.worlds[p.id];
-    const n = p.id === 'dressup' ? Object.keys(w.char.slots).length : w.items.length;
+    const n = w.items.length + (p.id === 'dressup' ? Object.keys(w.char.slots).length : 0);
     return `<button class="place-card" data-place="${p.id}">
       <span class="place-art">${placePreview(p.id)}</span>
       <span class="place-name">${esc(p[state.ui])}</span>
@@ -78,13 +108,17 @@ function renderHome() {
       ${n ? `<span class="place-count">${n}</span>` : ''}
     </button>`;
   }).join('');
+  const future = FUTURE_PLACES.map((p) => `<div class="place-card locked" aria-disabled="true">
+      <span class="place-lock">${ICON_LOCK}</span>
+      <span class="place-name">${esc(p[state.ui])}</span>
+      <span class="place-en" dir="ltr" lang="en">${esc(p.en)}</span>
+      <span class="small">${t().soon}</span>
+    </div>`).join('');
   app.innerHTML = `${header()}
     <main class="home">
       <h1 class="home-title">${t().choosePlace}</h1>
       <p class="home-sub">${t().tapToAdd}</p>
-      <div class="place-grid">${cards}
-        <div class="place-card soon" aria-disabled="true"><span class="place-name">${t().morePlaces}</span><span class="place-en">${t().morePlacesSub}</span></div>
-      </div>
+      <div class="place-grid">${cards}${future}</div>
       <p class="small center">${t().savedLocal}</p>
     </main>`;
   bindHeader();
@@ -94,7 +128,7 @@ function renderHome() {
 }
 
 function placePreview(id) {
-  const show = { bedroom: ['bed', 'lamp', 'plant'], dressup: ['shirt', 'hat', 'shoes'], park: ['tree', 'swing', 'flower'], track: ['car', 'flag', 'cone'] }[id];
+  const show = { bedroom: ['bed', 'lamp', 'plant'], dressup: ['shirt', 'hat', 'sneakers'], park: ['tree', 'swing', 'dog'], track: ['car', 'flag', 'cone'] }[id];
   return show.map((k) => `<span>${artFor(itemById(k))}</span>`).join('');
 }
 
@@ -106,7 +140,7 @@ function renderWorld() {
     <main class="world" dir="ltr">
       <section class="scene-wrap">
         <div class="scene scene-${p.id}" id="scene" aria-label="${esc(p[state.ui])}"></div>
-        <div class="toolbar" id="toolbar" dir="${t().dir}" hidden></div>
+        <div class="toolbar" id="toolbar" dir="${t().dir}"></div>
       </section>
       <aside class="panel" dir="${t().dir}">
         <h2 class="panel-title">${esc(p[state.ui])} <span class="en" dir="ltr" lang="en">${esc(p.en)}</span></h2>
@@ -123,15 +157,16 @@ function renderWorld() {
 function drawGrid() {
   const grid = document.getElementById('grid');
   const p = placeById(view.place);
+  const w = state.worlds[p.id];
   if (view.cat === '_bg') {
     grid.innerHTML = p.surfaces.map((s) => `<button class="tile-item surface" data-surf="${s.id}">
-      <span class="swatch-big" style="background:${state.worlds[p.id].bg[s.id]}"></span>
-      <span class="lbl">${esc(s.he && state.ui === 'he' ? s.he : s.en)}</span>
+      <span class="swatch-big" style="background:${esc(texBG(w.tex[s.id], w.bg[s.id]))}"></span>
+      <span class="lbl">${esc(state.ui === 'he' ? s.he : s.en)}</span>
       ${state.learned['_' + s.id] ? `<span class="en" dir="ltr" lang="en">${esc(s.en)}</span>` : ''}</button>`).join('');
-    grid.querySelectorAll('[data-surf]').forEach((b) => { b.onclick = () => openPalette(b, (c) => changeSurface(b.dataset.surf, c)); });
+    grid.querySelectorAll('[data-surf]').forEach((b) => { b.onclick = () => openSurface(b, b.dataset.surf); });
     return;
   }
-  const items = itemsFor(view.place).filter((it) => it.cat === view.cat);
+  const items = itemsFor(view.place).filter((it) => catOf(it, view.place) === view.cat);
   const tiles = [];
   for (const it of items) {
     for (let v = 0; v < variantsOf(it); v++) {
@@ -155,11 +190,24 @@ function drawScene() {
   const p = placeById(view.place);
   const w = state.worlds[p.id];
   const [s0, s1] = p.surfaces;
-  sc.style.setProperty('--s0', w.bg[s0.id]);
-  sc.style.setProperty('--s1', s1 ? w.bg[s1.id] : w.bg[s0.id]);
-  sc.style.setProperty('--split', p.split + '%');
-  if (p.id === 'dressup') return drawCharacter(sc);
-  sc.innerHTML = w.items.length ? '' : `<p class="scene-empty">${t().emptyScene}</p>`;
+  sc.innerHTML = '';
+  // background layers (always behind the items)
+  const top = document.createElement('div');
+  top.className = 'surf surf-top';
+  top.style.height = p.split + '%';
+  top.style.background = texBG(w.tex[s0.id], w.bg[s0.id]);
+  sc.appendChild(top);
+  if (s1) {
+    const bot = document.createElement('div');
+    bot.className = 'surf surf-bottom';
+    bot.style.top = p.split + '%';
+    bot.style.background = texBG(w.tex[s1.id], w.bg[s1.id]);
+    if (p.id === 'track') bot.innerHTML = '<span class="kerb"></span><span class="lane"></span>';
+    if (p.id === 'bedroom') bot.innerHTML = '<span class="skirting"></span>';
+    sc.appendChild(bot);
+  }
+  if (p.id === 'dressup') drawCharacter(sc);
+  if (!w.items.length && p.id !== 'dressup') sc.insertAdjacentHTML('beforeend', `<p class="scene-empty" dir="${t().dir}">${t().emptyScene}</p>`);
   w.items.forEach((inst) => {
     const it = itemById(inst.id);
     if (!it) return;
@@ -173,11 +221,11 @@ function drawScene() {
     el.tabIndex = 0;
     el.setAttribute('role', 'button');
     el.setAttribute('aria-label', state.learned[it.id] ? it.en : it.he);
-    el.innerHTML = `<div class="flipper" style="transform:scaleX(${inst.flip ? -1 : 1})">${artFor(it, inst)}</div>${inst.action === 'sleeping' ? '<span class="zz">z z</span>' : ''}`;
+    el.innerHTML = `<div class="flipper" style="transform:rotate(${inst.rot || 0}deg) scaleX(${inst.flip ? -1 : 1})">${artFor(it, inst)}</div>${inst.action === 'sleeping' ? '<span class="zz">z z</span>' : ''}`;
     sc.appendChild(el);
     makeDraggable(el, inst, sc);
   });
-  sc.onclick = (e) => { if (e.target === sc || e.target.classList.contains('scene-empty')) select(null); };
+  sc.onclick = (e) => { if (e.target === sc || e.target.classList.contains('surf') || e.target.classList.contains('scene-empty')) select(null); };
   showToolbar();
 }
 
@@ -186,8 +234,7 @@ function makeDraggable(el, inst, sc) {
   el.addEventListener('pointerdown', (e) => {
     e.preventDefault();
     el.setPointerCapture(e.pointerId);
-    const r = sc.getBoundingClientRect();
-    start = { x: e.clientX, y: e.clientY, ix: inst.x, iy: inst.y, r, moved: false };
+    start = { x: e.clientX, y: e.clientY, ix: inst.x, iy: inst.y, r: sc.getBoundingClientRect(), moved: false };
   });
   el.addEventListener('pointermove', (e) => {
     if (!start) return;
@@ -205,8 +252,7 @@ function makeDraggable(el, inst, sc) {
     const moved = start.moved;
     start = null;
     el.classList.remove('dragging');
-    if (moved) save();
-    else { select(inst.uid); const it = itemById(inst.id); if (state.learned[it.id]) say(it.en); }
+    if (moved) save(); else select(inst.uid); // tapping selects; the word is heard only with the speaker button
   };
   el.addEventListener('pointerup', end);
   el.addEventListener('pointercancel', end);
@@ -220,7 +266,9 @@ function makeDraggable(el, inst, sc) {
 
 function select(uid) {
   view.sel = uid;
-  document.querySelectorAll('.placed, .char-wrap').forEach((x) => x.classList.toggle('sel', x.dataset.uid == uid));
+  document.querySelectorAll('.placed').forEach((x) => x.classList.toggle('sel', x.dataset.uid == uid));
+  const cw = document.querySelector('.char-wrap');
+  if (cw) cw.classList.toggle('sel', typeof uid === 'string' && (uid === 'char' || uid.startsWith('slot:')));
   showToolbar();
 }
 
@@ -228,28 +276,32 @@ function showToolbar() {
   const tb = document.getElementById('toolbar');
   if (!tb) return;
   const w = state.worlds[view.place];
-  if (view.place === 'dressup') return charToolbar(tb);
+  if (view.place === 'dressup' && typeof view.sel === 'string') return charToolbar(tb);
   const inst = w.items.find((x) => x.uid === view.sel);
-  if (!inst) { tb.hidden = true; return; }
+  if (!inst) { tb.classList.add('idle'); tb.innerHTML = `<span class="tb-hint">${t().noneSelected}</span>`; return; }
+  tb.classList.remove('idle');
   const it = itemById(inst.id);
   const learned = state.learned[it.id];
-  tb.hidden = false;
   tb.innerHTML = `
     <span class="tb-name" dir="ltr" lang="en">${esc(learned ? it.en : it.he)}</span>
-    <button class="tb" data-tb="hear" aria-label="${t().hear}">${ICON.speaker}</button>
+    <button class="tb" data-tb="hear" aria-label="${t().hear}" title="${t().hear}">${ICON.speaker}</button>
     <button class="tb" data-tb="color">${ICON_PAINT}<span>${t().color}</span></button>
-    ${it.person ? `<button class="tb" data-tb="action">${ICON_RUN}<span>${t().action}</span></button><button class="tb" data-tb="skin">${ICON_FACE}<span>${t().skin}</span></button>` : ''}
-    <button class="tb" data-tb="bigger" aria-label="${t().bigger}">${ICON_PLUS}</button>
-    <button class="tb" data-tb="smaller" aria-label="${t().smaller}">${ICON_MINUS}</button>
-    <button class="tb" data-tb="flip" aria-label="${t().flip}">${ICON_FLIP}</button>
-    <button class="tb" data-tb="front" aria-label="${t().front}">${ICON_FRONT}</button>
-    <button class="tb danger" data-tb="remove" aria-label="${t().remove}">${ICON_TRASH}</button>`;
+    ${it.person ? `<button class="tb" data-tb="action">${ICON_RUN}<span>${t().action}</span></button><button class="tb" data-tb="skin" aria-label="${t().skin}" title="${t().skin}">${ICON_DROP}</button>` : ''}
+    <button class="tb" data-tb="bigger" aria-label="${t().bigger}" title="${t().bigger}">${ICON_PLUS}</button>
+    <button class="tb" data-tb="smaller" aria-label="${t().smaller}" title="${t().smaller}">${ICON_MINUS}</button>
+    <button class="tb" data-tb="rotl" aria-label="${t().rotL}" title="${t().rotL}">${ICON_ROTL}</button>
+    <button class="tb" data-tb="rotr" aria-label="${t().rotR}" title="${t().rotR}">${ICON_ROTR}</button>
+    <button class="tb" data-tb="flip" aria-label="${t().flip}" title="${t().flip}">${ICON_FLIP}</button>
+    <button class="tb" data-tb="front" aria-label="${t().front}" title="${t().front}">${ICON_FRONT}</button>
+    <button class="tb danger" data-tb="remove" aria-label="${t().remove}" title="${t().remove}">${ICON_TRASH}</button>`;
   tb.querySelectorAll('[data-tb]').forEach((b) => {
     b.onclick = () => {
       const a = b.dataset.tb;
-      if (a === 'hear') say(it.en);
-      if (a === 'bigger') { inst.w = Math.min(70, inst.w * 1.15); sfx.tap(); }
-      if (a === 'smaller') { inst.w = Math.max(4, inst.w / 1.15); sfx.tap(); }
+      if (a === 'hear') return say(it.en);
+      if (a === 'bigger') { inst.w = Math.min(80, inst.w * 1.15); sfx.tap(); }
+      if (a === 'smaller') { inst.w = Math.max(3, inst.w / 1.15); sfx.tap(); }
+      if (a === 'rotl') { inst.rot = ((inst.rot || 0) - 15) % 360; sfx.tap(); }
+      if (a === 'rotr') { inst.rot = ((inst.rot || 0) + 15) % 360; sfx.tap(); }
       if (a === 'flip') { inst.flip = !inst.flip; sfx.tap(); }
       if (a === 'front') { w.items.splice(w.items.indexOf(inst), 1); w.items.push(inst); sfx.tap(); }
       if (a === 'remove') { w.items.splice(w.items.indexOf(inst), 1); view.sel = null; sfx.whoosh(); }
@@ -269,93 +321,113 @@ function drawCharacter(sc) {
   const layer = (slot) => {
     const s = ch.slots[slot];
     if (!s) return '';
-    const it = itemById(s.id);
-    const d = DRESS_ART[it.dress[s.v || 0]];
-    return d.d(s.color || it.color);
+    const d = DRESS_ART[itemById(s.id).dress[s.v || 0]];
+    return d.d(s.color || itemById(s.id).color);
   };
-  const hair = ch.slots.hair ? DRESS_ART[itemById('hair').dress[ch.slots.hair.v || 0]] : null;
-  const back = hair && hair.back ? hair.back(ch.slots.hair.color) : '';
-  const inner = back + base.body + layer('bottom') + layer('feet') + layer('top') + layer('dress') + layer('outer') + layer('neck') + layer('side') + base.head + layer('hair') + layer('eyes') + layer('head');
-  sc.innerHTML = `<button class="char-wrap${view.sel === 'char' ? ' sel' : ''}" data-uid="char" aria-label="character">${svg(inner, '0 0 200 400')}</button>`;
-  sc.querySelector('.char-wrap').onclick = (e) => { e.stopPropagation(); select('char'); };
-  sc.onclick = () => select(null);
-  showToolbar();
+  const hairS = ch.slots.hair;
+  const hairD = hairS ? DRESS_ART[itemById('hair').dress[hairS.v || 0]] : null;
+  const back = hairD && hairD.back ? hairD.back(hairS.color) : '';
+  const inner = back + base.body + layer('bottom') + layer('feet') + layer('top') + layer('dress') + layer('outer') + layer('neck') + base.head + layer('hair');
+  const wrap = document.createElement('button');
+  wrap.className = 'char-wrap' + (typeof view.sel === 'string' ? ' sel' : '');
+  wrap.style.left = CH.left + '%';
+  wrap.style.width = CH.w + '%';
+  wrap.setAttribute('aria-label', 'character');
+  wrap.innerHTML = svg(inner, '0 0 200 420');
+  wrap.onclick = (e) => { e.stopPropagation(); select('char'); };
+  sc.appendChild(wrap);
 }
 
 function charToolbar(tb) {
   const ch = state.worlds.dressup.char;
-  if (view.sel !== 'char') { tb.hidden = true; return; }
-  tb.hidden = false;
+  tb.classList.remove('idle');
+  const slotSel = view.sel.startsWith('slot:') ? view.sel.slice(5) : null;
   const worn = Object.entries(ch.slots).map(([slot, s]) => {
     const it = itemById(s.id);
-    return `<button class="tb worn" data-slot="${slot}" aria-label="${esc(it.en)}"><span class="mini">${artFor(it, s)}</span></button>`;
+    return `<button class="tb worn${slot === slotSel ? ' on' : ''}" data-slot="${slot}" aria-label="${esc(it.en)}"><span class="mini">${artFor(it, s)}</span></button>`;
   }).join('');
+  let selPart = '';
+  if (slotSel && ch.slots[slotSel]) {
+    const it = itemById(ch.slots[slotSel].id);
+    const learned = state.learned[it.id];
+    selPart = `<span class="tb-sep"></span><span class="tb-name" dir="ltr" lang="en">${esc(learned ? it.en : it.he)}</span>
+      <button class="tb" data-p="hear" aria-label="${t().hear}" title="${t().hear}">${ICON.speaker}</button>
+      <button class="tb" data-p="color">${ICON_PAINT}<span>${t().color}</span></button>
+      <button class="tb danger" data-p="remove" aria-label="${t().remove}" title="${t().remove}">${ICON_TRASH}</button>`;
+  }
   tb.innerHTML = `
     <button class="tb" data-tb="feeling">${ICON_FACE}<span>${t().feeling}</span></button>
-    <button class="tb" data-tb="skin">${ICON_DROP}<span>${t().skin}</span></button>
-    ${worn}`;
+    <button class="tb" data-tb="skin" aria-label="${t().skin}" title="${t().skin}">${ICON_DROP}</button>
+    ${worn}${selPart}`;
   tb.querySelector('[data-tb="feeling"]').onclick = (e) => openList(e.currentTarget, FEELINGS, changeFeeling);
   tb.querySelector('[data-tb="skin"]').onclick = (e) => openSkins(e.currentTarget, (s) => { ch.skin = s; save(); drawScene(); });
-  tb.querySelectorAll('[data-slot]').forEach((b) => {
-    b.onclick = () => {
-      const s = ch.slots[b.dataset.slot];
-      const it = itemById(s.id);
-      if (state.learned[it.id]) say(it.en);
-      popover(b, `<div class="pop-row">
-        <button class="tb" data-p="color">${ICON_PAINT}<span>${t().color}</span></button>
-        <button class="tb danger" data-p="remove">${ICON_TRASH}<span>${t().remove}</span></button></div>`, (pop, close) => {
-        pop.querySelector('[data-p="color"]').onclick = () => { close(); openPalette(b, (c) => changeColor(s, it, c)); };
-        pop.querySelector('[data-p="remove"]').onclick = () => { close(); delete ch.slots[b.dataset.slot]; sfx.whoosh(); save(); drawScene(); };
-      });
-    };
-  });
+  tb.querySelectorAll('[data-slot]').forEach((b) => { b.onclick = () => { sfx.tap(); view.sel = 'slot:' + b.dataset.slot; showToolbar(); }; });
+  if (selPart) {
+    const s = ch.slots[slotSel];
+    const it = itemById(s.id);
+    tb.querySelector('[data-p="hear"]').onclick = () => say(it.en);
+    tb.querySelector('[data-p="color"]').onclick = (e) => openPalette(e.currentTarget, (c) => changeColor(s, it, c));
+    tb.querySelector('[data-p="remove"]').onclick = () => { delete ch.slots[slotSel]; view.sel = 'char'; sfx.whoosh(); save(); drawScene(); };
+  }
 }
 
 // ---------- adding items (word task) ----------
 async function addItem(item, v) {
   sfx.tap();
-  const topic = topicOf(view.place);
-  const pool = itemsFor(view.place).filter((x) => x.id !== item.id).map((x) => x.en);
-  const extra = ITEMS.filter((x) => x.id !== item.id && !pool.includes(x.en)).map((x) => x.en);
-  const r = await runWordTask({ word: item.en, artSvg: artFor(item, { v }), level: state.levels[topic], distractors: pool.length >= 3 ? pool : pool.concat(extra) });
+  const topic = view.place;
+  const pool = [...new Set(itemsFor(view.place).filter((x) => x.en !== item.en).map((x) => x.en))];
+  const r = await runWordTask({ word: item.en, artSvg: artFor(item, { v }), level: state.levels[topic], distractors: pool });
   if (!r.ok) return;
   learnWord(item.id);
   recordWordResult(topic, r);
   if (r.fellBack) state.review = state.review.filter((x) => x.id !== item.id).concat({ id: item.id, place: view.place });
   placeItem(item, v);
   sfx.pop();
-  const res = addPoints(10 + (r.firstTry ? 5 : 0));
-  afterSuccess(res);
+  afterSuccess(addPoints(10 + (r.firstTry ? 5 : 0)));
   maybeReview(item.id);
 }
 
+// An accessory starts where it belongs on the character (box is on the 200x420 character).
+function accInst(item, v, uid) {
+  const [ax, ay, aw, ah] = ACCESSORIES[item.acc[v]].box;
+  return { uid, id: item.id, v, x: CH.left + ((ax + aw / 2) / 200) * CH.w, y: CH.top + ((ay + ah / 2) / 420) * CH.h, w: (aw / 200) * CH.w, color: item.color, rot: 0 };
+}
+
 function placeItem(item, v) {
-  if (view.place === 'dressup') {
+  const p = placeById(view.place);
+  const w = state.worlds[view.place];
+  if (item.dress) {
     const slot = DRESS_ART[item.dress[v]].slot;
-    state.worlds.dressup.char.slots[slot] = { id: item.id, v, color: item.color };
-    view.sel = 'char';
+    w.char.slots[slot] = { id: item.id, v, color: item.color };
+    if (slot === 'dress') { delete w.char.slots.top; delete w.char.slots.bottom; }
+    if ((slot === 'top' || slot === 'bottom') && w.char.slots.dress) delete w.char.slots.dress;
+    view.sel = 'slot:' + slot;
+  } else if (item.acc) {
+    const inst = accInst(item, v, nextUid());
+    w.items.push(inst);
+    view.sel = inst.uid;
   } else {
-    const p = placeById(view.place);
     const y = SKY.includes(item.id) ? 12 + Math.random() * 20
       : WALL.includes(item.id) ? p.split * (0.35 + Math.random() * 0.3)
       : p.split + (100 - p.split) * (0.3 + Math.random() * 0.35);
-    const inst = { uid: nextUid(), id: item.id, v, x: 20 + Math.random() * 60, y, w: item.w || 14, color: item.color };
-    if (item.person) inst.skin = rand(SKINS);
-    state.worlds[view.place].items.push(inst);
+    const inst = { uid: nextUid(), id: item.id, v, x: 20 + Math.random() * 60, y, w: item.w || 14, color: item.color, rot: 0 };
+    if (item.person) { inst.skin = rand(SKINS); inst.hair = rand(HAIR_COLORS); }
+    w.items.push(inst);
     view.sel = inst.uid;
   }
   save();
   drawScene();
   drawGrid();
-  const el = document.querySelector('.placed.sel, .char-wrap');
-  if (el) { el.classList.add('pop-in'); }
+  const el = document.querySelector('.placed.sel');
+  if (el) el.classList.add('pop-in');
 }
+
 
 async function maybeReview(justId) {
   const q = state.review.find((x) => x.id !== justId);
   if (!q || Math.random() > 0.5) return;
   const item = itemById(q.id);
-  const pool = itemsFor(q.place).filter((x) => x.id !== item.id).map((x) => x.en);
+  const pool = [...new Set(itemsFor(q.place).filter((x) => x.en !== item.en).map((x) => x.en))];
   await wait(500);
   const r = await runWordTask({ word: item.en, artSvg: artFor(item), level: state.levels[q.place] || 1, distractors: pool, forceType: rand(['type', 'scramble']), badge: t().review });
   if (r.ok && !r.fellBack) {
@@ -366,24 +438,32 @@ async function maybeReview(justId) {
 }
 
 // ---------- changing things (sentence tasks) ----------
+// Colors: at levels 1-2 the basic color word is enough ("blue"); at level 3 the shade is needed ("light blue").
+function colorWords(color) {
+  const lv = state.levels.sentences;
+  if (lv >= 3) return { value: color.en, accept: [color.en] };
+  return { value: color.base, accept: [color.base, color.en] };
+}
+
 async function changeColor(inst, it, color) {
   const subject = it.person ? 'shirt' : it.en;
-  const preview = { ...inst, color: color.hex };
-  const r = await runSentenceTask({ kind: 'color', artSvg: artFor(it, preview), subject, value: color.en, valueHe: color.he, swatch: color.hex, level: state.levels.sentences });
+  const cw = colorWords(color);
+  const r = await runSentenceTask({ kind: 'color', artSvg: artFor(it, { ...inst, color: color.hex }), subject, value: cw.value, accept: cw.accept, valueHe: color.he, swatch: color.hex, level: state.levels.sentences });
   if (!r.ok) return;
   inst.color = color.hex;
   sfx.paint();
-  if (it.person) learnWord('_shirt');
   sentenceDone(r);
 }
 
 async function changeSurface(surfId, color) {
   const p = placeById(view.place);
   const s = p.surfaces.find((x) => x.id === surfId);
-  const box = `<svg viewBox="0 0 100 100" aria-hidden="true"><rect x="10" y="10" width="80" height="80" rx="14" fill="${color.hex}" stroke="#0A2540" stroke-width="2.5"/></svg>`;
-  const r = await runSentenceTask({ kind: 'surface', artSvg: box, subject: s.en, value: color.en, valueHe: `${s.he} · ${color.he}`, swatch: color.hex, level: state.levels.sentences });
+  const w = state.worlds[p.id];
+  const box = `<div class="surf-preview" style="background:${esc(texBG(w.tex[surfId], color.hex))}"></div>`;
+  const cw = colorWords(color);
+  const r = await runSentenceTask({ kind: 'surface', artSvg: box, subject: s.en, value: cw.value, accept: cw.accept, valueHe: `${s.he} · ${color.he}`, swatch: color.hex, level: state.levels.sentences });
   if (!r.ok) return;
-  state.worlds[p.id].bg[surfId] = color.hex;
+  w.bg[surfId] = color.hex;
   learnWord('_' + surfId);
   sfx.paint();
   sentenceDone(r);
@@ -399,7 +479,7 @@ async function changeAction(inst, it, action) {
 async function changeFeeling(f) {
   const ch = state.worlds.dressup.char;
   const face = characterBase(ch.skin, f.en).head;
-  const r = await runSentenceTask({ kind: 'feeling', artSvg: svg(face, '50 30 100 100'), subject: 'I', value: f.en, valueHe: f.he, level: state.levels.sentences });
+  const r = await runSentenceTask({ kind: 'feeling', artSvg: svg(face, '64 22 72 76'), subject: 'I', value: f.en, valueHe: f.he, level: state.levels.sentences });
   if (!r.ok) return;
   ch.feeling = f.en;
   sentenceDone(r);
@@ -444,24 +524,44 @@ function popover(anchor, html, bind) {
   document.body.appendChild(pop);
   const r = anchor.getBoundingClientRect();
   const pr = pop.getBoundingClientRect();
-  let left = Math.min(window.innerWidth - pr.width - 8, Math.max(8, r.left + r.width / 2 - pr.width / 2));
+  const left = Math.min(window.innerWidth - pr.width - 8, Math.max(8, r.left + r.width / 2 - pr.width / 2));
   let top = r.top - pr.height - 8;
-  if (top < 8) top = r.bottom + 8;
+  if (top < 8) top = Math.min(window.innerHeight - pr.height - 8, r.bottom + 8);
   pop.style.left = left + 'px';
-  pop.style.top = top + window.scrollY + 'px';
+  pop.style.top = Math.max(8, top) + window.scrollY + 'px';
   const close = () => pop.remove();
   setTimeout(() => document.addEventListener('pointerdown', function h(e) { if (!pop.contains(e.target)) { close(); document.removeEventListener('pointerdown', h); } }), 0);
   bind(pop, close);
 }
 function closePopovers() { document.querySelectorAll('.popover').forEach((p) => p.remove()); }
 
+function paletteHTML() {
+  const groups = [];
+  for (const c of COLORS) {
+    let g = groups.find((x) => x.base === c.base && !(c.base === 'gray' && x.full));
+    if (!g) { g = { base: c.base, list: [] }; groups.push(g); }
+    g.list.push(c);
+    if (g.list.length >= 3) g.full = true;
+  }
+  return `<div class="palette">${groups.map((g) => `<div class="pal-col">${g.list.map((c) => `<button class="sw" style="background:${c.hex}" data-i="${COLORS.indexOf(c)}" aria-label="${esc(c.he)}" title="${esc(c.he)}"></button>`).join('')}</div>`).join('')}</div>`;
+}
 function openPalette(anchor, onPick) {
-  popover(anchor, `<div class="palette">${COLORS.map((c, i) => `<button class="sw" style="background:${c.hex}" data-i="${i}" aria-label="${esc(c.he)}"></button>`).join('')}</div>`, (pop, close) => {
+  popover(anchor, paletteHTML(), (pop, close) => {
     pop.querySelectorAll('.sw').forEach((b) => { b.onclick = () => { close(); onPick(COLORS[+b.dataset.i]); }; });
   });
 }
+function openSurface(anchor, surfId) {
+  const w = state.worlds[view.place];
+  const texes = TEXTURES[surfId] || ['plain'];
+  popover(anchor, `<p class="pop-title">${t().texture}</p>
+    <div class="tex-row">${texes.map((x) => `<button class="tex${w.tex[surfId] === x ? ' on' : ''}" data-tex="${x}" style="background:${esc(texBG(x, w.bg[surfId]))}" aria-label="${esc(TEXTURE_NAMES[x] || x)}" title="${esc(TEXTURE_NAMES[x] || x)}"></button>`).join('')}</div>
+    <p class="pop-title">${t().color}</p>${paletteHTML()}`, (pop, close) => {
+    pop.querySelectorAll('[data-tex]').forEach((b) => { b.onclick = () => { w.tex[surfId] = b.dataset.tex; sfx.paint(); save(); drawScene(); drawGrid(); close(); }; });
+    pop.querySelectorAll('.sw').forEach((b) => { b.onclick = () => { close(); changeSurface(surfId, COLORS[+b.dataset.i]); }; });
+  });
+}
 function openSkins(anchor, onPick) {
-  popover(anchor, `<div class="palette">${SKINS.map((s) => `<button class="sw" style="background:${s}" data-s="${s}" aria-label="${t().skin}"></button>`).join('')}</div>`, (pop, close) => {
+  popover(anchor, `<div class="palette one-row">${SKINS.map((s) => `<button class="sw" style="background:${s}" data-s="${s}" aria-label="${t().skin}"></button>`).join('')}</div>`, (pop, close) => {
     pop.querySelectorAll('.sw').forEach((b) => { b.onclick = () => { close(); sfx.tap(); onPick(b.dataset.s); }; });
   });
 }
@@ -510,7 +610,8 @@ function openProgress() {
 }
 
 function openDictionary() {
-  const words = ITEMS.filter((it) => state.learned[it.id]);
+  const seen = new Set();
+  const words = ITEMS.filter((it) => state.learned[it.id] && !seen.has(it.en) && seen.add(it.en));
   const html = words.length ? `<div class="dict">${words.map((it) => `<button class="dict-item" data-say="${esc(it.en)}">
       <span class="tile-art">${artFor(it)}</span><b dir="ltr" lang="en">${esc(it.en)}</b><span>${esc(it.he)}</span></button>`).join('')}</div>`
     : `<p>${t().noWords}</p>`;
@@ -576,6 +677,8 @@ const ICON_FACE = I(`<circle cx="12" cy="12" r="9" ${SW}/><path d="M8.5 14.5a4.5
 const ICON_DROP = I(`<path d="M12 3s6 6.5 6 11a6 6 0 0 1-12 0c0-4.5 6-11 6-11z" ${SW}/>`);
 const ICON_PLUS = I(`<path d="M12 5v14M5 12h14" ${SW}/>`);
 const ICON_MINUS = I(`<path d="M5 12h14" ${SW}/>`);
+const ICON_ROTL = I(`<path d="M4 4v6h6M4.5 10A8 8 0 1 1 6 16.5" ${SW}/>`);
+const ICON_ROTR = I(`<path d="M20 4v6h-6M19.5 10A8 8 0 1 0 18 16.5" ${SW}/>`);
 const ICON_FLIP = I(`<path d="M12 3v18M8 7L3 12l5 5M16 7l5 5-5 5" ${SW}/>`);
 const ICON_FRONT = I(`<rect x="8" y="8" width="12" height="12" rx="2" ${SW}/><path d="M4 16V5a1 1 0 0 1 1-1h11" ${SW}/>`);
 const ICON_TRASH = I(`<path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3" ${SW}/>`);
@@ -584,32 +687,41 @@ const ICON_TRASH = I(`<path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v
 function demo(place) {
   setDemo(true);
   const s = JSON.parse(JSON.stringify(state));
-  const add = (id, x, y, w, extra = {}) => s.worlds[place].items.push({ uid: s.uid++, id, v: 0, x, y, w: w || itemById(id).w, color: itemById(id).color, ...extra });
+  s.worlds[place].items = [];
+  const add = (id, x, y, w, extra = {}) => s.worlds[place].items.push({ uid: s.uid++, id, v: 0, x, y, w: w || itemById(id).w, color: itemById(id).color, rot: 0, ...extra });
+  const learn = (list) => list.forEach((k) => { s.learned[k] = { n: 1 }; });
   if (place === 'bedroom') {
-    s.worlds.bedroom.bg = { wall: '#BFE9F7', floor: '#C99A6B' };
-    add('window', 26, 30, 18); add('curtain', 26, 30, 28); add('picture', 62, 28, 13); add('clock', 82, 22, 9);
-    add('rug', 50, 86, 40, { color: '#3DDBC4' }); add('bed', 66, 70, 38); add('lamp', 14, 60, 13, { v: 0 }); add('plant', 90, 70, 10);
-    add('record_player', 34, 76, 15); add('girl', 46, 72, 11, { skin: '#D7A16E', action: 'dancing', color: '#3FB36F' });
-    ['bed', 'window', 'curtain', 'picture', 'clock', 'rug', 'lamp', 'plant', 'record_player', 'girl'].forEach((k) => { s.learned[k] = { n: 1 }; });
+    s.worlds.bedroom.bg = { wall: '#CFE6EE', floor: '#C99A6B' };
+    s.worlds.bedroom.tex = { wall: 'stripes', floor: 'wood' };
+    add('window', 24, 30, 20); add('curtain', 24, 30, 30, { color: '#2EC4B6' }); add('poster', 52, 26, 11, { color: '#8A5CC8' }); add('shelf', 76, 28, 18, { v: 1 });
+    add('rug', 52, 88, 44, { v: 2, color: '#F2C230' }); add('bed', 68, 74, 38, { v: 1, color: '#2F7BC0' }); add('lamp', 14, 70, 12, { v: 0 }); add('plant', 92, 74, 10);
+    add('record_player', 34, 84, 15); add('cat', 44, 92, 11, { v: 1 }); add('girl', 36, 66, 10, { skin: '#B9805A', hair: '#2B1B10', action: 'dancing', color: '#3FA66A' });
+    learn(['bed', 'window', 'curtain', 'poster', 'shelf', 'rug', 'lamp', 'plant', 'record_player', 'cat', 'girl']);
   }
   if (place === 'park') {
-    add('sun', 84, 16, 12); add('cloud', 22, 16, 18); add('cloud', 56, 10, 13); add('kite', 64, 28, 9);
-    add('tree', 16, 52, 26); add('tree', 86, 54, 22, { color: '#2F9A5B' }); add('swing', 40, 64, 22); add('slide', 66, 70, 22);
-    add('bench', 22, 82, 20); add('flower', 50, 88, 7); add('flower', 56, 90, 7, { color: '#FFD54F' }); add('dog', 80, 88, 12); add('boy', 40, 74, 10, { skin: '#8A5A3B', action: 'waving' });
-    ['sun', 'cloud', 'kite', 'tree', 'swing', 'slide', 'bench', 'flower', 'boy'].forEach((k) => { s.learned[k] = { n: 1 }; });
+    s.worlds.park.tex = { sky: 'clouds', grass: 'flowers' };
+    add('sun', 86, 14, 12); add('kite', 64, 22, 9);
+    add('tree', 14, 50, 26); add('tree', 88, 52, 20, { v: 1, color: '#2F7D4A' }); add('swing', 40, 66, 22); add('slide', 66, 70, 22);
+    add('bench', 20, 84, 20); add('flower', 50, 90, 6); add('flower', 55, 92, 6, { v: 1, color: '#F7F6F2' }); add('dog', 82, 88, 12); add('duck', 34, 92, 8);
+    add('boy', 40, 72, 9, { skin: '#8D5A3A', hair: '#1C1C1C', action: 'waving' }); add('teenager', 74, 76, 9, { skin: '#FDE0C6', hair: '#B5483B' });
+    learn(['sun', 'kite', 'tree', 'swing', 'slide', 'bench', 'flower', 'dog', 'duck', 'boy', 'teenager']);
   }
   if (place === 'track') {
-    add('flag', 12, 40, 14); add('traffic_light', 88, 40, 9); add('trophy', 74, 46, 9);
-    add('car', 30, 74, 26); add('car', 68, 86, 24, { v: 1, color: '#1279B8' }); add('motorcycle', 56, 66, 17, { color: '#3DDBC4' });
-    add('cone', 88, 78, 6); add('cone', 94, 82, 6); add('driver', 46, 44, 10, { skin: '#F1C27D', action: 'jumping' }); add('fan', 30, 44, 10, { skin: '#5E3B25' });
-    ['flag', 'traffic_light', 'trophy', 'car', 'motorcycle', 'cone', 'driver', 'fan'].forEach((k) => { s.learned[k] = { n: 1 }; });
+    add('flag', 10, 40, 12); add('traffic_light', 90, 40, 8); add('trophy', 76, 46, 8);
+    add('car', 30, 74, 26); add('car', 70, 88, 24, { v: 2, color: '#2F7BC0' }); add('motorcycle', 56, 66, 16, { color: '#2EC4B6' });
+    add('cone', 90, 80, 6); add('cone', 95, 84, 6); add('driver', 46, 44, 9, { skin: '#F3C9A0', hair: '#5E3B25', action: 'jumping' }); add('fan', 28, 44, 9, { skin: '#5C3A24' });
+    learn(['flag', 'traffic_light', 'trophy', 'car', 'motorcycle', 'cone', 'driver', 'fan']);
   }
   if (place === 'dressup') {
-    s.worlds.dressup.bg = { wall: '#E3F4FA' };
-    s.worlds.dressup.char = { skin: '#D7A16E', feeling: 'happy', slots: {
-      hair: { id: 'hair', v: 2, color: '#2B1B10' }, top: { id: 'shirt', v: 0, color: '#3DDBC4' }, bottom: { id: 'pants', v: 0, color: '#1279B8' },
-      feet: { id: 'boots', v: 0, color: '#12855A' }, neck: { id: 'scarf', v: 0, color: '#FFD54F' }, eyes: { id: 'glasses', v: 0, color: '#0B4F8A' } } };
-    ['hair', 'shirt', 'pants', 'boots', 'scarf', 'glasses'].forEach((k) => { s.learned[k] = { n: 1 }; });
+    s.worlds.dressup.tex = { wall: 'dots' };
+    s.worlds.dressup.char = { skin: '#B9805A', feeling: 'happy', slots: {
+      hair: { id: 'hair', v: 9, color: '#2B1B10' }, top: { id: 'hoodie', v: 0, color: '#2EC4B6' }, bottom: { id: 'jeans', v: 0, color: '#3E5C8A' },
+      feet: { id: 'sneakers', v: 0, color: '#F7F6F2' } } };
+    learn(['hair', 'hoodie', 'jeans', 'sneakers']);
+  }
+  if (place === 'dressup') {
+    s.worlds.dressup.items.push(accInst(itemById('sunglasses'), 0, s.uid++), accInst(itemById('bag'), 1, s.uid++));
+    learn(['sunglasses', 'bag']);
   }
   replaceState(s);
   view = { place, cat: placeById(place).cats[0].id, sel: null };
@@ -618,7 +730,9 @@ function demo(place) {
 // ---------- start ----------
 const params = new URLSearchParams(location.search);
 if (params.get('lang') === 'en' || params.get('lang') === 'he') { state.ui = params.get('lang'); save(); }
-if (params.get('demo') && placeById(params.get('demo'))) demo(params.get('demo'));
+if (params.get('demo') && placeById(params.get('demo'))) {
+  demo(params.get('demo'));
+}
 render();
 if ('serviceWorker' in navigator && location.protocol.startsWith('http') && !params.get('demo')) {
   navigator.serviceWorker.register('./sw.js').catch(() => {});

@@ -21,7 +21,8 @@ The full product spec is in [SPEC.md](SPEC.md).
 | `js/tasks.js` | Word and sentence tasks, tries, hints, easier fallback |
 | `js/state.js` | Saving in the browser, hidden placement, levels, points, ranks |
 | `js/data.js` | Places, items, colors, actions, ranks (add new items here) |
-| `js/art.js` | All drawings, as SVG |
+| `js/art.js` | All drawings for the teen game, as SVG |
+| `js/art-kids.js` | The first, cute drawings, kept for the little-kids coloring world |
 | `js/i18n.js` | Interface text in Hebrew and English |
 | `js/sound.js`, `js/speech.js` | Sound effects; speaking and listening |
 | `js/logo.js` | The sticker logo |

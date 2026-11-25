@@ -1,16 +1,16 @@
 // Game state: saved in the browser (localStorage), no account needed.
 import { PLACES, RANKS } from './data.js';
 
-const KEY = 'wordcraft.v1';
+const KEY = 'wordcraft.v2'; // v2: new art and items (v1 saves are not compatible)
 
 function fresh() {
   const worlds = {};
   for (const p of PLACES) {
-    const bg = {};
-    for (const s of p.surfaces) bg[s.id] = s.color;
-    worlds[p.id] = { bg, items: [] };
+    const bg = {}, tex = {};
+    for (const s of p.surfaces) { bg[s.id] = s.color; tex[s.id] = s.tex; }
+    worlds[p.id] = { bg, tex, items: [] };
   }
-  worlds.dressup.char = { skin: '#F1C27D', feeling: 'happy', slots: {} };
+  worlds.dressup.char = { skin: '#DDA878', feeling: 'happy', slots: { hair: { id: 'hair', v: 0, color: '#5E3B25' }, top: { id: 'shirt', v: 0, color: '#F7F6F2' }, bottom: { id: 'pants', v: 0, color: '#3E5C8A' } } };
   return {
     v: 1,
     ui: 'he',

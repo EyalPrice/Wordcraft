@@ -50,7 +50,18 @@ function openShell({ artSvg, badge }) {
     ov, box,
     prompt: (s) => { $('.task-prompt', box).textContent = s; },
     body: $('.task-body', box),
-    hint: (s) => { const h = $('.task-hint', box); h.textContent = s; h.classList.toggle('on', !!s); },
+    hint: (s, hearText) => {
+      const h = $('.task-hint', box);
+      h.textContent = s;
+      if (hearText) {
+        const b = document.createElement('button');
+        b.className = 'btn hear-hint';
+        b.innerHTML = `${ICON.speaker}<span>${t().hearIt}</span>`;
+        b.onclick = () => say(hearText, 0.8);
+        h.appendChild(b);
+      }
+      h.classList.toggle('on', !!s || !!hearText);
+    },
     feedback: (s, kind) => { const f = $('.task-feedback', box); f.textContent = s; f.className = 'task-feedback ' + (kind || ''); },
     shake: () => { box.classList.remove('shake'); void box.offsetWidth; box.classList.add('shake'); },
     close: () => { ov.classList.remove('show'); setTimeout(() => ov.remove(), 200); },
@@ -101,7 +112,12 @@ export function runWordTask(opts) {
       ui.shake();
       if (fellBack) { ui.feedback(t().tryAgain, 'bad'); api.applyHint && api.applyHint(9); return; }
       if (wrong === 1) ui.feedback(t().tryAgain, 'bad');
-      else if (wrong === 2 || wrong === 3) { hintLevel = wrong - 1; ui.feedback(`${t().hint} ${hintLevel}`, 'hint'); api.applyHint(hintLevel); }
+      else if (wrong === 2 || wrong === 3) {
+        hintLevel = wrong - 1;
+        ui.feedback(`${t().hint} ${hintLevel}`, 'hint');
+        api.applyHint(hintLevel);
+        if (hintLevel === 2) { const cur = $('.task-hint', ui.box).textContent; ui.hint(cur, word); }
+      }
       else { fellBack = true; ui.feedback(t().easier, 'hint'); ui.hint(''); render('pick2'); }
     };
 
@@ -155,7 +171,11 @@ export function runWordTask(opts) {
         tiles.className = 'tiles';
         tiles.dir = 'ltr';
         tiles.innerHTML = order.map((i) => `<button class="tile" data-src="${i}">${esc(letters[i])}</button>`).join('');
-        b.append(slots, tiles);
+        const hear = document.createElement('button');
+        hear.className = 'btn small-hear';
+        hear.innerHTML = `${ICON.speaker}<span>${t().hear}</span>`;
+        hear.onclick = () => say(word, 0.8);
+        b.append(hear, slots, tiles);
         const slotEls = [...slots.querySelectorAll('.slot')];
         const fillState = new Map(); // slot -> tile
         const locked = new Set();
@@ -238,9 +258,10 @@ export function runWordTask(opts) {
 // ---------- sentence task ----------
 // opts: {artSvg, kind:'color'|'action'|'feeling'|'surface', subject, value, valueHe, swatch, level}
 export function sentenceTarget(o) {
-  if (o.kind === 'feeling') return { words: ['I', 'am', o.value], re: new RegExp(`^(i am|i'm|im) ${o.value}$`) };
+  const vals = (o.accept || [o.value]).map((v) => norm(v).replace(/gray/g, '(gray|grey)')).join('|');
+  if (o.kind === 'feeling') return { words: ['I', 'am', ...o.value.split(' ')], re: new RegExp(`^(i am|i'm|im) (${vals})$`) };
   const subj = norm(o.subject);
-  return { words: ['The', ...o.subject.split(' '), 'is', o.value], re: new RegExp(`^(the|my|this|that) ${subj} is ${norm(o.value)}$`) };
+  return { words: ['The', ...o.subject.split(' '), 'is', ...o.value.split(' ')], re: new RegExp(`^(the|my|this|that) ${subj} is (${vals})$`) };
 }
 
 export function runSentenceTask(o) {
@@ -255,12 +276,14 @@ export function runSentenceTask(o) {
 
     const chip = document.createElement('div');
     chip.className = 'value-chip';
-    chip.innerHTML = `${o.swatch ? `<span class="sw" style="background:${o.swatch}"></span>` : ''}<span>${esc(o.valueHe)}</span>`;
+    chip.innerHTML = `${o.swatch ? `<span class="sw" style="background:${o.swatch}"></span>` : ''}<span>${esc(o.valueHe)}</span>
+      <button class="chip-hear" aria-label="${t().hear}">${ICON.speaker}</button>`;
+    chip.querySelector('.chip-hear').onclick = () => say(o.value, 0.8);
 
     const blank = (w) => w.replace(/[a-z]/gi, '_');
     const firstL = (w) => w[0] + w.slice(1).replace(/[a-z]/gi, '_');
     const w = target.words;
-    const variable = (i) => i > 0 && !['is', 'am'].includes(w[i].toLowerCase()); // subject + value positions
+    const variable = (i) => i > 0 && !['is', 'am'].includes(w[i].toLowerCase()) && !(o.kind === 'feeling' && i < 2); // subject + value positions
     const patternAll = () => w.map((x, i) => variable(i) ? blank(x) : x).join(' ') + '.';
     const patternFirst = () => w.map((x, i) => variable(i) ? firstL(x) : x).join(' ') + '.';
     const patternLast = () => w.map((x, i) => i === w.length - 1 ? firstL(x) : x).join(' ') + '.';
@@ -281,7 +304,7 @@ export function runSentenceTask(o) {
       const l1 = o.level <= 1;
       if (wrong === 1) ui.feedback(t().tryAgain, 'bad');
       else if (wrong === 2) { ui.feedback(`${t().hint} 1`, 'hint'); ui.hint(l1 ? patternFirst() : patternAll()); }
-      else if (wrong === 3) { ui.feedback(`${t().hint} 2`, 'hint'); ui.hint(l1 ? patternLast() : patternFirst()); }
+      else if (wrong === 3) { ui.feedback(`${t().hint} 2`, 'hint'); ui.hint(l1 ? patternLast() : patternFirst(), w.join(' ')); }
       else { fellBack = true; ui.feedback(t().easier, 'hint'); ui.hint(''); renderArrange(); }
     };
     const check = (s) => { if (target.re.test(norm(s))) succeed(); else fail(); };

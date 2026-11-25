@@ -1,5 +1,5 @@
 // Offline support: keeps the game's files so it works without internet after the first visit.
-const CACHE = 'wordcraft-v1';
+const CACHE = 'wordcraft-v2';
 const FILES = [
   './', './index.html', './play.html', './css/style.css', './manifest.webmanifest', './icons/icon.svg',
   './js/game.js', './js/art.js', './js/data.js', './js/i18n.js', './js/sound.js', './js/speech.js',
