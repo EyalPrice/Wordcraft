@@ -17,7 +17,10 @@ const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&l
 const rand = (a) => a[Math.floor(Math.random() * a.length)];
 
 const SKY = ['cloud', 'sun', 'kite', 'bird', 'butterfly'];
-const WALL = ['window', 'curtain', 'picture', 'poster', 'clock', 'mirror'];
+const WALL = ['window', 'curtain', 'picture', 'poster', 'clock', 'mirror', 'blackboard', 'map', 'sign_open', 'class_clock'];
+// Flat things lie on the floor, so they start in the back layer (behind furniture and people).
+const FLAT = ['rug', 'towel', 'sea', 'crater'];
+const startsBehind = (id) => FLAT.includes(id) || WALL.includes(id);
 
 // Dress-up character placement inside the 4:3 scene (character box is 200x420).
 const CH = { w: 0.94 * 0.75 * (200 / 420) * 100, top: 3, h: 94 };
@@ -57,7 +60,8 @@ function charInner(ch) {
     const A = ACCESSORIES[it.acc[a.v || 0]];
     const cx = ((a.x - CH.left) / CH.w) * 200, cy = ((a.y - CH.top) / CH.h) * 420;
     const aw = (a.w / CH.w) * 200, ah = aw * (A.box[3] / A.box[2]);
-    return `<g transform="translate(${cx} ${cy}) rotate(${a.rot || 0}) scale(${a.flip ? -1 : 1} 1)"><svg x="${-aw / 2}" y="${-ah / 2}" width="${aw}" height="${ah}" viewBox="0 0 ${A.box[2]} ${A.box[3]}" overflow="visible">${A.d(a.color || it.color)}</svg></g>`;
+    const k = aw / A.box[2];
+    return `<g transform="translate(${cx} ${cy}) rotate(${a.rot || 0}) scale(${a.flip ? -1 : 1} 1) translate(${-aw / 2} ${-ah / 2}) scale(${k})">${A.d(a.color || it.color)}</g>`;
   };
   const behind = ch.acc.filter((a) => itemById(a.id)?.acc?.[a.v || 0] === 'wings');
   const front = ch.acc.filter((a) => !behind.includes(a));
@@ -162,7 +166,7 @@ function renderHome() {
 }
 
 function placePreview(id) {
-  if (id === 'coloring') return ['lion', 'elephant', 'fish'].map((k) => `<span>${svg(COLORING[k])}</span>`).join('');
+  if (id === 'coloring') return ['lion', 'elephant', 'fish'].map((k) => `<span>${svg(COLORING[k], '0 0 200 200')}</span>`).join('');
   if (id === 'dressup') return state.chars.slice(0, 3).map((c) => `<span class="pv-char">${charSVG(c)}</span>`).join('');
   const show = { bedroom: ['bed', 'lamp', 'plant'], park: ['tree', 'swing', 'dog'], track: ['car', 'flag', 'cone'], garden: ['sunflower', 'watering_can', 'ladybug'],
     kitchen: ['fridge', 'stove', 'cake'], beach: ['beach_umbrella', 'sandcastle', 'crab'], street: ['house', 'stop_sign', 'street_bus'], restaurant: ['pizza', 'burger', 'juice'],
@@ -342,11 +346,13 @@ function showToolbar() {
     <button class="tb" data-tb="rotr" aria-label="${t().rotR}" title="${t().rotR}">${ICON_ROTR}</button>
     <button class="tb" data-tb="flip" aria-label="${t().flip}" title="${t().flip}">${ICON_FLIP}</button>
     <button class="tb" data-tb="front" aria-label="${t().front}" title="${t().front}">${ICON_FRONT}</button>
+    <button class="tb" data-tb="back" aria-label="${t().back2}" title="${t().back2}">${ICON_BACK}</button>
     <button class="tb danger" data-tb="remove" aria-label="${t().remove}" title="${t().remove}">${ICON_TRASH}</button>`;
   tb.querySelectorAll('[data-tb]').forEach((b) => {
     b.onclick = () => {
       const a = b.dataset.tb;
       if (a === 'hear') return say(it.en);
+      if (a === 'back') { list.splice(list.indexOf(inst), 1); list.unshift(inst); sfx.tap(); }
       if (a === 'bigger') { inst.w = Math.min(80, inst.w * 1.15); sfx.tap(); }
       if (a === 'smaller') { inst.w = Math.max(3, inst.w / 1.15); sfx.tap(); }
       if (a === 'rotl') { inst.rot = ((inst.rot || 0) - 15) % 360; sfx.tap(); }
@@ -480,10 +486,12 @@ function charInstToolbar(tb, inst, list) {
     <button class="tb" data-tb="rotr" aria-label="${t().rotR}" title="${t().rotR}">${ICON_ROTR}</button>
     <button class="tb" data-tb="flip" aria-label="${t().flip}" title="${t().flip}">${ICON_FLIP}</button>
     <button class="tb" data-tb="front" aria-label="${t().front}" title="${t().front}">${ICON_FRONT}</button>
+    <button class="tb" data-tb="back" aria-label="${t().back2}" title="${t().back2}">${ICON_BACK}</button>
     <button class="tb danger" data-tb="remove" aria-label="${t().remove}" title="${t().remove}">${ICON_TRASH}</button>`;
   tb.querySelectorAll('[data-tb]').forEach((b) => {
     b.onclick = () => {
       const a = b.dataset.tb;
+      if (a === 'back') { list.splice(list.indexOf(inst), 1); list.unshift(inst); }
       if (a === 'action') return openList(b, ACTIONS, (x) => changeAction(inst, { he: charName(ch), en: 'character' }, x));
       if (a === 'studio') { state.charIdx = state.chars.indexOf(ch); view = { place: 'dressup', cat: placeById('dressup').cats[0].id, sel: 'char' }; save(); return render(); }
       if (a === 'bigger') inst.w = Math.min(60, inst.w * 1.15);
@@ -504,13 +512,14 @@ const KID_PAGES = [
   ['bird', 'ציפור'], ['butterfly', 'פרפר'], ['frog', 'צפרדע'], ['pig', 'חזיר'], ['cow', 'פרה'], ['bear', 'דוב'],
 ];
 const KID_COLORS = COLORS.filter((c) => !c.shade && !['turquoise', 'white'].includes(c.en));
-let brush = null;
+const BRUSHES = [6, 14, 28]; // pencil sizes (in canvas pixels; the canvas is 600x600)
+let brush = null;      // current color (hex) – set after the child says the color word
+let brushSize = 1;     // index into BRUSHES
+let eraser = false;
 
-function pageSVG(id) {
-  const fills = state.coloring[id] || {};
-  let h = COLORING[id];
-  return h.replace(/data-area="(\d+)"([^>]*?)fill="#FFFFFF"/g, (m, n, mid) => `data-area="${n}"${mid}fill="${fills[n] || '#FFFFFF'}"`);
-}
+// A saved drawing is a picture (data URL) under the outline. Older saves (area fills) are ignored.
+const savedDrawing = (id) => (typeof state.coloring[id] === 'string' ? state.coloring[id] : null);
+const pageThumb = (id) => `<span class="kid-thumb">${savedDrawing(id) ? `<img src="${savedDrawing(id)}" alt="">` : ''}${svg(COLORING[id], '0 0 200 200')}</span>`;
 
 function renderColoring() {
   const page = view.page;
@@ -518,7 +527,7 @@ function renderColoring() {
     app.innerHTML = `${header()}
       <main class="home kid-home">
         <h1 class="home-title">${t().kidWhat}</h1>
-        <div class="kid-grid">${KID_PAGES.map(([id, he]) => `<button class="kid-card" data-page="${id}" aria-label="${esc(he)}">${svg(pageSVG(id))}
+        <div class="kid-grid">${KID_PAGES.map(([id, he]) => `<button class="kid-card" data-page="${id}" aria-label="${esc(he)}">${pageThumb(id)}
           <span>${state.kidWords[id] ? `<b dir="ltr" lang="en">${id}</b>` : esc(he)}</span></button>`).join('')}</div>
       </main>`;
     bindHeader();
@@ -529,14 +538,22 @@ function renderColoring() {
   app.innerHTML = `${header()}
     <main class="kid-page" dir="ltr">
       <section class="kid-canvas-wrap">
-        <div class="kid-canvas" id="kidCanvas" role="img" aria-label="${esc(he)}">${svg(pageSVG(page))}</div>
+        <div class="kid-canvas" id="kidCanvas" aria-label="${esc(he)}">
+          <canvas width="600" height="600" id="paper"></canvas>
+          <div class="kid-lines">${svg(COLORING[page], '0 0 200 200')}</div>
+        </div>
       </section>
       <aside class="panel kid-panel" dir="${t().dir}">
         <button class="btn" data-back>${t().kidBack}</button>
         <h2 class="panel-title">${esc(he)} <button class="chip-hear" data-hear aria-label="${t().hear}">${ICON.speaker}</button></h2>
         <p class="small">${t().kidPickColor}</p>
-        <div class="kid-colors">${KID_COLORS.map((c) => `<button class="kid-sw${brush === c.hex ? ' on' : ''}" style="background:${c.hex}" data-c="${c.en}" aria-label="${esc(c.he)}">
+        <div class="kid-colors">${KID_COLORS.map((c) => `<button class="kid-sw${brush === c.hex && !eraser ? ' on' : ''}" style="background:${c.hex}" data-c="${c.en}" aria-label="${esc(c.he)}">
           ${state.kidWords['c:' + c.en] ? `<span dir="ltr" lang="en">${c.en}</span>` : ''}</button>`).join('')}</div>
+        <div class="kid-tools">
+          ${BRUSHES.map((s, i) => `<button class="kid-size${i === brushSize && !eraser ? ' on' : ''}" data-size="${i}" aria-label="${t().pencil} ${i + 1}"><span style="width:${6 + i * 8}px;height:${6 + i * 8}px;background:${brush || '#2B3440'}"></span></button>`).join('')}
+          <button class="kid-size${eraser ? ' on' : ''}" data-eraser aria-label="${t().eraser}" title="${t().eraser}">${ICON_ERASER}</button>
+          <button class="kid-size" data-clear aria-label="${t().clearAll}" title="${t().clearAll}">${ICON_TRASH}</button>
+        </div>
       </aside>
     </main>`;
   bindHeader();
@@ -548,27 +565,53 @@ function renderColoring() {
       const ok = await runKidSay({ word: c.en, prompt: t().kidSayColor, artHTML: `<div class="kid-swatch" style="background:${c.hex}"></div>` });
       if (!ok) return;
       if (!state.kidWords['c:' + c.en]) { state.kidWords['c:' + c.en] = 1; addPoints(5, { countSuccess: false }); }
-      brush = c.hex;
+      brush = c.hex; eraser = false;
       sfx.paint(); save(); render();
     };
   });
-  const canvas = document.getElementById('kidCanvas');
-  canvas.onclick = (e) => {
-    const area = e.target.closest('[data-area]');
-    if (!area) return;
-    if (!brush) { sfx.wrong(); toast(t().kidPickColor); return; }
-    const n = area.dataset.area;
-    (state.coloring[page] = state.coloring[page] || {})[n] = brush;
-    canvas.querySelectorAll(`[data-area="${n}"]`).forEach((x) => x.setAttribute('fill', brush));
-    sfx.paint(); save();
+  app.querySelectorAll('[data-size]').forEach((b) => { b.onclick = () => { brushSize = +b.dataset.size; eraser = false; sfx.tap(); render(); }; });
+  app.querySelector('[data-eraser]').onclick = () => { eraser = true; sfx.tap(); render(); };
+  app.querySelector('[data-clear]').onclick = async () => {
+    if (!(await confirmBox(t().clearConfirm))) return;
+    delete state.coloring[page]; save(); render();
   };
+
+  // ---- free drawing with a pencil: color appears only where the finger or mouse goes ----
+  const cv = document.getElementById('paper');
+  const ctx = cv.getContext('2d');
+  const saved = savedDrawing(page);
+  if (saved) { const img = new Image(); img.onload = () => ctx.drawImage(img, 0, 0, 600, 600); img.src = saved; }
+  let last = null;
+  const pos = (e) => { const r = cv.getBoundingClientRect(); return { x: ((e.clientX - r.left) / r.width) * 600, y: ((e.clientY - r.top) / r.height) * 600 }; };
+  const stroke = (a, b2) => {
+    ctx.globalCompositeOperation = eraser ? 'destination-out' : 'source-over';
+    ctx.strokeStyle = brush || '#000';
+    ctx.lineWidth = eraser ? BRUSHES[2] * 1.4 : BRUSHES[brushSize];
+    ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+    ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b2.x, b2.y); ctx.stroke();
+  };
+  cv.addEventListener('pointerdown', (e) => {
+    if (!brush && !eraser) { sfx.wrong(); toast(t().kidPickColor); return; }
+    e.preventDefault();
+    cv.setPointerCapture(e.pointerId);
+    last = pos(e);
+    stroke(last, { x: last.x + 0.1, y: last.y + 0.1 });
+  });
+  cv.addEventListener('pointermove', (e) => { if (!last) return; const p = pos(e); stroke(last, p); last = p; });
+  const end = () => {
+    if (!last) return;
+    last = null;
+    try { state.coloring[page] = cv.toDataURL('image/png'); save(); } catch { /* storage full */ }
+  };
+  cv.addEventListener('pointerup', end);
+  cv.addEventListener('pointercancel', end);
 }
 
 async function openPage(id) {
   sfx.tap();
   if (!state.kidWords[id]) {
     const he = KID_PAGES.find((x) => x[0] === id)[1];
-    const ok = await runKidSay({ word: id, prompt: t().kidSayAnimal, artHTML: svg(COLORING[id]) });
+    const ok = await runKidSay({ word: id, prompt: t().kidSayAnimal, artHTML: svg(COLORING[id], '0 0 200 200') });
     if (!ok) return;
     state.kidWords[id] = 1;
     addPoints(5, { countSuccess: false });
@@ -621,7 +664,7 @@ function placeItem(item, v) {
       : p.split + (100 - p.split) * (0.3 + Math.random() * 0.35);
     const inst = { uid: nextUid(), id: item.id, v, x: 20 + Math.random() * 60, y, w: item.w || 14, color: item.color, rot: 0 };
     if (item.person) { inst.skin = rand(SKINS); inst.hair = rand(HAIR_COLORS); }
-    list.push(inst);
+    if (startsBehind(item.id)) list.unshift(inst); else list.push(inst);
     view.sel = inst.uid;
   }
   save();
@@ -933,6 +976,8 @@ const ICON_ROTL = I(`<path d="M4 4v6h6M4.5 10A8 8 0 1 1 6 16.5" ${SW}/>`);
 const ICON_ROTR = I(`<path d="M20 4v6h-6M19.5 10A8 8 0 1 0 18 16.5" ${SW}/>`);
 const ICON_FLIP = I(`<path d="M12 3v18M8 7L3 12l5 5M16 7l5 5-5 5" ${SW}/>`);
 const ICON_FRONT = I(`<rect x="8" y="8" width="12" height="12" rx="2" ${SW}/><path d="M4 16V5a1 1 0 0 1 1-1h11" ${SW}/>`);
+const ICON_BACK = I(`<rect x="4" y="4" width="12" height="12" rx="2" ${SW} stroke-dasharray="3 2"/><rect x="9" y="9" width="11" height="11" rx="2" fill="currentColor" opacity=".25" stroke="currentColor" stroke-width="2"/>`);
+const ICON_ERASER = I(`<path d="M16 3l5 5-11 11H5l-2-2z" ${SW}/><path d="M9 9l6 6M5 19h15" ${SW}/>`);
 const ICON_TRASH = I(`<path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3" ${SW}/>`);
 
 // ---------- demo scenes (for the website screenshots): play.html?demo=bedroom ----------

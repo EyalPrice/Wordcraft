@@ -154,15 +154,15 @@ svg { display: block; }
 @keyframes popin { from { transform: scale(0.2); } }
 .zz { position: absolute; top: -10%; right: -10%; font-weight: 700; color: var(--blue); font-size: 0.9rem; animation: zz 2s infinite; }
 @keyframes zz { 50% { transform: translateY(-6px); opacity: 0.5; } }
-.act-sit svg { transform: scaleY(0.84) translateY(9%); }
-.act-dance svg { animation: dance 0.9s ease-in-out infinite; transform-origin: bottom center; }
-.act-jump svg { animation: jump 0.8s ease-in-out infinite; }
-.act-sleep svg { transform: rotate(-80deg); }
-.act-wave svg { animation: wave 1.2s ease-in-out infinite; transform-origin: bottom center; }
+.act-sit .flipper > svg { transform: scaleY(0.84) translateY(9%); }
+.act-dance .flipper > svg { animation: dance 0.9s ease-in-out infinite; transform-origin: bottom center; }
+.act-jump .flipper > svg { animation: jump 0.8s ease-in-out infinite; }
+.act-sleep .flipper > svg { transform: rotate(-80deg); }
+.act-wave .flipper > svg { animation: wave 1.2s ease-in-out infinite; transform-origin: bottom center; }
 @keyframes dance { 0%, 100% { transform: rotate(-7deg); } 50% { transform: rotate(7deg); } }
 @keyframes jump { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-20%); } }
 @keyframes wave { 0%, 100% { transform: rotate(0); } 50% { transform: rotate(5deg); } }
-@media (prefers-reduced-motion: reduce) { .act-dance svg, .act-jump svg, .act-wave svg, .zz, .glowable.glow::after { animation: none; } }
+@media (prefers-reduced-motion: reduce) { .act-dance .flipper > svg, .act-jump .flipper > svg, .act-wave .flipper > svg, .zz, .glowable.glow::after { animation: none; } }
 
 .char-wrap { position: absolute; z-index: 1; top: 3%; height: 94%; border: 0; background: transparent; padding: 0; border-radius: 16px; cursor: pointer; }
 .char-wrap svg { width: 100%; height: 100%; overflow: visible; filter: drop-shadow(0 4px 0 rgba(10, 37, 64, 0.08)); }
@@ -358,14 +358,22 @@ svg { display: block; }
 /* ---------- coloring world ---------- */
 .kid-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 16px; }
 .kid-card { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 12px; background: #fff; border: 3px solid var(--navy); border-radius: 22px; box-shadow: var(--shadow); font-size: 1.2rem; font-weight: 600; }
-.kid-card svg { width: 120px; height: 120px; }
+
 .kid-card:hover { transform: translateY(-3px) rotate(-1deg); }
 .kid-page { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 16px; padding: 8px 16px 16px; max-width: 1300px; margin: 0 auto; }
 @media (max-width: 860px) { .kid-page { grid-template-columns: 1fr; } }
 .kid-canvas-wrap { display: flex; justify-content: center; }
-.kid-canvas { width: min(100%, calc(100vh - 110px)); aspect-ratio: 1; background: #fff; border: 3px solid var(--navy); border-radius: 26px; box-shadow: var(--shadow); padding: 12px; cursor: pointer; }
-.kid-canvas svg { width: 100%; height: 100%; }
-.kid-canvas [data-area]:hover { filter: brightness(0.94); }
+.kid-canvas { position: relative; width: min(100%, calc(100vh - 110px)); aspect-ratio: 1; background: #fff; border: 3px solid var(--navy); border-radius: 26px; box-shadow: var(--shadow); overflow: hidden; }
+.kid-canvas canvas { position: absolute; inset: 0; width: 100%; height: 100%; touch-action: none; cursor: crosshair; }
+.kid-lines { position: absolute; inset: 0; pointer-events: none; }
+.kid-lines svg { width: 100%; height: 100%; }
+.kid-tools { display: flex; flex-wrap: wrap; gap: 8px; }
+.kid-size { width: 52px; height: 52px; border-radius: 14px; border: 2px solid #C5DCE8; background: #fff; display: grid; place-items: center; }
+.kid-size.on { border: 3px solid var(--navy); background: var(--sky); }
+.kid-size span { display: block; border-radius: 50%; }
+.kid-size svg { width: 24px; height: 24px; }
+.kid-thumb { position: relative; width: 120px; height: 120px; display: block; }
+.kid-thumb img, .kid-thumb svg { position: absolute; inset: 0; width: 100%; height: 100%; }
 .kid-panel { height: auto; gap: 10px; }
 .kid-panel .panel-title { display: flex; align-items: center; gap: 8px; font-size: 1.6rem; }
 .kid-colors { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }

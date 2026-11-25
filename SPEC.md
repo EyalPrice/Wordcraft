@@ -1,6 +1,6 @@
 # Wordcraft – Product Specification
 
-*Version 0.4 – feedback round 2 applied (character studio, all 15 worlds built, prize wall, many more items). Stored in the GitHub repo (EyalPrice/Wordcraft) as SPEC.md and updated with each release.*
+*Version 0.5 – feedback round 3 applied (coloring with a free pencil, coloring-book drawings, layers, character accessories move with the character). Stored in the GitHub repo (EyalPrice/Wordcraft) as SPEC.md and updated with each release.*
 
 ## 1. Overview
 
@@ -72,8 +72,8 @@ Wordcraft (Hebrew subtitle: "יוצרים עם מילים באנגלית") is a 
   2. Dress-up character (clothing vocabulary)
   3. Park
   4. Race track
-- 15 worlds are built. 4 are open from the start: bedroom, character studio, park, race track.
-- The other 11 open one by one as the player earns points (see Rewards): coloring world for little kids, garden, kitchen, beach, street, restaurant, classroom, airport, magic forest, graffiti wall, the moon. Locked worlds show a lock and the rank that opens them.
+- 15 worlds are built. 5 are open from the start: bedroom, character studio, park, race track, and the coloring world for little kids (little kids don't collect points, so it is never locked).
+- The other 10 open one by one as the player earns points (see Rewards): garden, kitchen, beach, street, restaurant, classroom, airport, magic forest, graffiti wall, the moon. Locked worlds show a lock and the rank that opens them.
 - Test mode for the team: open `play.html?test=wordcraft-team` once and every world and prize is open in that browser. `play.html?test=off` (or the button in Settings) turns it off.
 - Each starting place focuses on a different word area.
 - Each world has its own surfaces, categories and items (about 250 items in all), and its own people (e.g. waiter, astronaut, pilot, lifeguard, gardener, wizard).
@@ -85,7 +85,8 @@ Wordcraft (Hebrew subtitle: "יוצרים עם מילים באנגלית") is a 
 - Bedroom examples: many lamp types, mirrors, wardrobes, door handles, decorations, flowers, pictures, curtains, rugs, wall colors, wall decorations, a radio, a record player with records and a record holder, each in many colors.
 - Surfaces have textures as well as colors, everywhere: walls (plain, stripes, dots, bricks, wood, checks, flowers, waves), floors (wood, tiles, checks, carpet, stone), sky (plain, sunset, night, clouds), grass (plain, flowers, stripes, sand), road (asphalt, dirt, checks). Textures are free to choose; changing a color needs a sentence.
 - Many animals, each with variants: cat, dog, rabbit, hamster, turtle, fish (aquarium), parrot, bird, butterfly, duck, squirrel, horse, unicorn.
-- Every placed item can be moved, resized, rotated, flipped and brought to the front.
+- Every placed item can be moved, resized, rotated, flipped, brought to the front layer or sent to the back layer (two buttons in the item toolbar).
+- Flat floor things (rug, towel, sea, crater) and wall things (window, curtain, picture, poster, clock, mirror, blackboard, map, sign) start in the back layer automatically, so they never cover furniture or people.
 - Almost everything is available from the start. The player should not depend on the game to express their style.
 - Only a few special items and new places are locked and unlocked by progress.
 - Every item's color can be changed, always with an English sentence.
@@ -102,7 +103,8 @@ Wordcraft (Hebrew subtitle: "יוצרים עם מילים באנגלית") is a 
 - Character studio (was "dress-up"): pages 1, 2, 3… with a + button; each page holds one character the player designs. A character can be deleted (it then leaves every room too).
 - "Put in a room" places the character in any open world. My characters also appear at the top of the People category in every room.
 - It is the same character everywhere: a change in the studio shows in every room it stands in, and one character can stand in many rooms at once.
-- In a room, a character can get actions with a sentence ("The character is dancing"), be resized, rotated, flipped, removed, or opened in the studio for editing.
+- In a room, a character can get actions with a sentence ("The character is dancing"), be resized, rotated, flipped, sent to the front or back layer, removed, or opened in the studio for editing.
+- The character's own accessories (earrings, glasses, hats, bags…) are part of the character, so they move with it in every action (jumping, dancing, sleeping…). Objects in the room are not affected.
 - Character design: one connected, realistic body (not separate parts), with teen proportions. Free choice of skin tone, feeling, 12 hairstyles and many clothes, with no gender labels.
 - Clothes (hair, tops, coats and dresses, pants and skirts, shoes, scarf) are worn on the body. The worn item shows its English word and a speaker button, like items in the rooms.
 - Accessories (hats, cap, glasses, sunglasses, earrings, necklace, watch, bow, bags, headphones, crown) are free: move, resize, rotate and flip them.
@@ -175,13 +177,18 @@ Wordcraft (Hebrew subtitle: "יוצרים עם מילים באנגלית") is a 
 | 2026-11-25 | All 11 extra worlds built; locked by points for players; test mode address for the team |
 | 2026-11-25 | Prize wall with big stickers and prizes per rank; 15 ranks |
 | 2026-11-25 | Sentence tasks: hear buttons for both the thing and the value |
+| 2026-11-25 | Feedback round 3: coloring world open to all; coloring-book drawings; free pencil instead of area fill |
+| 2026-11-25 | Layers: send-to-back button; flat and wall items start in the back layer |
+| 2026-11-25 | Character accessories move with the character in every action |
 
-### Coloring world for little kids (built in 0.4)
+### Coloring world for little kids (open to everyone from the start)
 
-- 12 outline pictures of animals (lion, elephant, hippo, cat, dog, fish, bird, butterfly, frog, pig, cow, bear) in the first, cute style.
+- 12 coloring-book pictures of animals (lion, elephant, hippo, cat, dog, fish, bird, butterfly, frog, pig, cow, bear), drawn as real line drawings in flowing lines, not built from circles and squares.
 - The child picks a picture. The first time, they hear the English word and say it (speech recognition; an "I said it!" button when the browser can't listen, or after two tries).
-- To pick a color, the child hears and says the color word. Then they color the picture by hand, area by area. To change color, they pick and say another color.
-- Words the child said are shown on the picture and color buttons. Colored pictures are saved.
+- To pick a color, the child hears and says the color word.
+- Coloring is free drawing with a pencil: color appears only where the finger or mouse goes (no fill-the-area tap). Three pencil sizes, an eraser, and a "start over" button. The picture's lines always stay on top.
+- To change color, the child picks and says another color.
+- Words the child said are shown on the picture and color buttons. Drawings are saved in the browser and shown on the picture cards.
 
 ## 18. Planned next (approved, not built yet)
 

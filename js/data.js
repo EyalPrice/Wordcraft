@@ -129,7 +129,7 @@ const W = (id, he, en, surfaces, split, cats) => ({ id, he, en, surfaces, split,
 const S = (id, en, he, color, tex) => ({ id, en, he, color, tex });
 const C = (id, he, en) => ({ id, he, en });
 PLACES.push(
-  { id: 'coloring', he: 'עולם הצביעה לקטנים', en: 'Coloring for little kids', coloring: true, locked: true, surfaces: [], cats: [] },
+  { id: 'coloring', he: 'עולם הצביעה לקטנים', en: 'Coloring for little kids', coloring: true, locked: false, surfaces: [], cats: [] },
   W('garden', 'גינה', 'Garden', [S('sky', 'sky', 'שמיים', '#B5E2F5', 'plain'), S('grass', 'grass', 'דשא', '#6FB85F', 'stripes')], 58,
     [C('plants', 'צמחים', 'Plants'), C('tools', 'כלים', 'Tools'), C('animals', 'חיות', 'Animals'), C('people', 'אנשים', 'People')]),
   W('kitchen', 'מטבח', 'Kitchen', [S('wall', 'wall', 'קיר', '#F4F2EC', 'tiles'), S('floor', 'floor', 'רצפה', '#9AA7B4', 'checks')], 64,
@@ -468,7 +468,7 @@ ITEMS.push(
 // Ranks: every rank gives a sticker, and many give a special item and/or open a new world.
 export const RANKS = [
   { points: 0, he: 'מתחילים', en: 'Starter', icon: 'seed', color: '#3FA66A' },
-  { points: 40, he: 'סקרנים', en: 'Explorer', icon: 'magnifier', color: '#2EC4B6', world: 'coloring' },
+  { points: 40, he: 'סקרנים', en: 'Explorer', icon: 'magnifier', color: '#2EC4B6' },
   { points: 90, he: 'צבעונים', en: 'Colorful', icon: 'brush', color: '#F08A2E', world: 'garden', prize: 'parrot' },
   { points: 150, he: 'מעצבים', en: 'Designer', icon: 'star', color: '#2F7BC0', world: 'kitchen', prize: 'crown' },
   { points: 220, he: 'שוחים', en: 'Swimmer', icon: 'wave', color: '#2F9BD0', world: 'beach', prize: 'fountain' },
