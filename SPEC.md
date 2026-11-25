@@ -1,6 +1,6 @@
 # Wordcraft – Product Specification
 
-*Version 0.1 – draft for review. Stored in the GitHub repo (EyalPrice/Wordcraft) as SPEC.md and updated with each release.*
+*Version 0.2 – open questions closed, first build started. Stored in the GitHub repo (EyalPrice/Wordcraft) as SPEC.md and updated with each release.*
 
 ## 1. Overview
 
@@ -24,7 +24,7 @@ Wordcraft (Hebrew subtitle: "יוצרים עם מילים באנגלית") is a 
 
 - A web app played in a browser (e.g. Chrome) on computer or phone.
 - Hosted on GitHub Pages from the repo EyalPrice/Wordcraft.
-- An installable Android app may be added later.
+- An installable Android app is a far-future option, not planned for now.
 - No sign-up, no login, no email. Open the site and play.
 - Anyone with the link can play.
 - Works offline by default after loading. When online, speech checking may be better (browser speech recognition).
@@ -38,6 +38,16 @@ Wordcraft (Hebrew subtitle: "יוצרים עם מילים באנגלית") is a 
 5. Sentences can be both spoken and typed.
 6. Task types vary each time to keep it fresh.
 
+### Task types (first version, chosen by Claude, the team adjusts later)
+
+| Task | What the player does | Level |
+| --- | --- | --- |
+| Pick the word | Sees the item and picks its English word from 2–4 options | 1+ |
+| Unscramble | Puts mixed-up letters in order | 1+ |
+| Listen and type | Hears the word and types it | 2+ |
+| Say it | Says the word aloud (speech recognition; typing if the browser can't listen) | 2+ |
+| Sentence | Says or types a full sentence to change an item, e.g. "The lamp is blue." | all |
+
 ## 6. Mistakes, hints and getting stuck
 
 - The answer is never revealed. An item is placed only after success.
@@ -50,8 +60,8 @@ Wordcraft (Hebrew subtitle: "יוצרים עם מילים באנגלית") is a 
 
 - Same items, worlds and styles at every level. Only the English level rises (e.g. "red table" at first, "The big red table is next to the window" later).
 - The game silently adjusts difficulty per topic, and sometimes gives a slightly harder challenge question.
-- At the start, the player may choose Level 1, 2, 3 or "Not sure". Each level shows a small sample so players can tell which fits them.
-- Open point: an alternative proposal is to always start at the easiest level with a hidden placement phase in the first questions. To be decided.
+- Decided: there is no level-choice screen. Every player starts at the easiest level, and the first tasks are a hidden placement phase that is never called a test.
+- The placement moves fast: a player who answers the first tasks correctly and quickly jumps up a level or more, so a strong player does not get bored.
 - The level is not shown on the main screen. It is visible only in an inner menu, where the player can also change it.
 - Instructions are in Hebrew. At an advanced level the game asks whether the player wants to switch instructions to English, and the player decides.
 
@@ -74,6 +84,8 @@ Wordcraft (Hebrew subtitle: "יוצרים עם מילים באנגלית") is a 
 - Backgrounds and floors are customizable too.
 - Almost everything is available from the start. The player should not depend on the game to express their style.
 - Only a few special items and new places are locked and unlocked by progress.
+- Every item's color can be changed, always with an English sentence.
+- Items are chosen by Claude: as many items and variants as possible in every place.
 
 ## 10. People and characters
 
@@ -125,10 +137,15 @@ Wordcraft (Hebrew subtitle: "יוצרים עם מילים באנגלית") is a 
 - No cross-device sync at this stage.
 - Future option: a personal game code (no email or password), always visible in settings, to continue on another device. This needs a small server.
 
-## 17. Open questions
+## 17. Decisions log
 
-- Placement: level choice at start (1, 2, 3, Not sure) or always start easy with a hidden placement phase?
-- Exact task types.
-- Exact list of items per starting place for the first version.
-- Whether and when to add an installable Android app.
+| Date | Decision |
+| --- | --- |
+| 2026-11-25 | Hidden placement phase, no level-choice screen |
+| 2026-11-25 | Task types and item lists chosen by Claude; team reviews and adjusts |
+| 2026-11-25 | Every item's color can be changed with a sentence |
+| 2026-11-25 | Android app postponed to the far future |
+
+## 18. Open questions
+
 - Whether and when to add the personal game code with a server.

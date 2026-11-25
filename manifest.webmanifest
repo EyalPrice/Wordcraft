@@ -1,0 +1,13 @@
+{
+  "name": "Wordcraft – יוצרים עם מילים באנגלית",
+  "short_name": "Wordcraft",
+  "start_url": "./play.html",
+  "display": "standalone",
+  "background_color": "#E3F4FA",
+  "theme_color": "#0B4F8A",
+  "lang": "he",
+  "dir": "rtl",
+  "icons": [
+    { "src": "icons/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
+  ]
+}

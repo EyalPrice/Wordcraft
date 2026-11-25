@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Wordcraft – יוצרים עם מילים באנגלית</title>
+<meta name="description" content="Wordcraft: מעצבים חדרים ועולמות ולומדים אנגלית תוך כדי. משחק חינמי בדפדפן, בלי הרשמה.">
+<meta name="theme-color" content="#0B4F8A">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body class="landing">
+<div class="lang-switch" dir="ltr">
+  <button data-lang="he" aria-pressed="true">עברית</button>
+  <button data-lang="en" aria-pressed="false">English</button>
+</div>
+<main class="land">
+  <div class="land-logo" id="logo"></div>
+  <p class="land-tagline" data-t="tagline">מעצבים חדרים ועולמות ולומדים אנגלית תוך כדי</p>
+  <a class="btn primary huge" href="play.html" id="start" data-t="start">להתחיל לשחק</a>
+
+  <section class="shots" aria-roledescription="carousel" aria-label="Screenshots">
+    <button class="shot-nav prev" aria-label="Previous screenshot"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+    <div class="shot-track" id="track" dir="ltr" tabindex="0">
+      <figure class="shot"><img src="images/screen-bedroom.png" alt="חדר שינה מעוצב במשחק" width="1200" height="760" loading="lazy"><figcaption data-t="cap1">מעצבים חדר שינה, מילה אחרי מילה</figcaption></figure>
+      <figure class="shot"><img src="images/screen-park.png" alt="פארק מעוצב במשחק" width="1200" height="760" loading="lazy"><figcaption data-t="cap2">בונים פארק, ונותנים לאנשים פעולות במשפטים</figcaption></figure>
+      <figure class="shot"><img src="images/screen-task.png" alt="משימת מילה במשחק" width="1200" height="760" loading="lazy"><figcaption data-t="cap3">כל חפץ נפתח במשימה קטנה באנגלית</figcaption></figure>
+    </div>
+    <button class="shot-nav next" aria-label="Next screenshot"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5l7 7-7 7" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+    <div class="dots" role="tablist"></div>
+  </section>
+
+  <p class="land-note" data-t="note">חינם, בלי הרשמה ובלי אימייל. עובד במחשב ובטלפון.</p>
+</main>
+<footer class="land-foot"><span data-t="by">משחק של אביגיל פרייס</span></footer>
+
+<script type="module">
+import { logoHTML } from './js/logo.js';
+document.getElementById('logo').innerHTML = logoHTML();
+
+const TEXT = {
+  he: { tagline: 'מעצבים חדרים ועולמות ולומדים אנגלית תוך כדי', start: 'להתחיל לשחק', note: 'חינם, בלי הרשמה ובלי אימייל. עובד במחשב ובטלפון.',
+        cap1: 'מעצבים חדר שינה, מילה אחרי מילה', cap2: 'בונים פארק, ונותנים לאנשים פעולות במשפטים', cap3: 'כל חפץ נפתח במשימה קטנה באנגלית', by: 'משחק של אביגיל פרייס' },
+  en: { tagline: 'Design rooms and worlds, and learn English along the way', start: 'Start playing', note: 'Free, no sign-up, no email. Works on computer and phone.',
+        cap1: 'Design a bedroom, word by word', cap2: 'Build a park and give people actions with sentences', cap3: 'Every item opens with a small English task', by: 'A game by Avigail Price' },
+};
+let lang = 'he';
+try { const s = JSON.parse(localStorage.getItem('wordcraft.v1') || '{}'); if (s.ui) lang = s.ui; } catch {}
+function setLang(l) {
+  lang = l;
+  document.documentElement.lang = l;
+  document.documentElement.dir = l === 'he' ? 'rtl' : 'ltr';
+  document.querySelectorAll('[data-t]').forEach((el) => { el.textContent = TEXT[l][el.dataset.t]; });
+  document.querySelectorAll('[data-lang]').forEach((b) => b.setAttribute('aria-pressed', b.dataset.lang === l));
+  document.getElementById('start').href = 'play.html?lang=' + l;
+}
+document.querySelectorAll('[data-lang]').forEach((b) => { b.onclick = () => setLang(b.dataset.lang); });
+setLang(lang);
+
+// Screenshots: one at a time, swipe or tap the arrows (no auto-play).
+const track = document.getElementById('track');
+const shots = [...track.children];
+const dots = document.querySelector('.dots');
+dots.innerHTML = shots.map((_, i) => `<button role="tab" aria-label="${i + 1}"></button>`).join('');
+const go = (i) => { i = (i + shots.length) % shots.length; track.scrollTo({ left: shots[i].offsetLeft - track.offsetLeft, behavior: 'smooth' }); };
+const current = () => Math.round(track.scrollLeft / track.clientWidth);
+const mark = () => [...dots.children].forEach((d, i) => d.setAttribute('aria-selected', i === current()));
+track.addEventListener('scroll', () => requestAnimationFrame(mark));
+document.querySelector('.shot-nav.prev').onclick = () => go(current() - 1);
+document.querySelector('.shot-nav.next').onclick = () => go(current() + 1);
+[...dots.children].forEach((d, i) => { d.onclick = () => go(i); });
+track.addEventListener('keydown', (e) => { if (e.key === 'ArrowLeft') go(current() - 1); if (e.key === 'ArrowRight') go(current() + 1); });
+mark();
+if ('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js').catch(() => {});
+</script>
+</body>
+</html>
