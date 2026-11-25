@@ -36,7 +36,7 @@ export const FR = (c) => {
   return `url(#${id})`;
 };
 export const E = (c, w = 1.3) => `stroke="${shade(c, -34)}" stroke-width="${w}" stroke-linejoin="round" stroke-linecap="round"`;
-const sh = (cx, cy, rx) => `<ellipse cx="${cx}" cy="${cy}" rx="${rx}" ry="${Math.max(1.5, rx * 0.11)}" fill="${OUT}" opacity=".16"/>`;
+export const sh = (cx, cy, rx) => `<ellipse cx="${cx}" cy="${cy}" rx="${rx}" ry="${Math.max(1.5, rx * 0.11)}" fill="${OUT}" opacity=".16"/>`;
 const dk = (c, a = -16) => shade(c, a);
 const lt = (c, a = 18) => shade(c, a);
 
@@ -720,6 +720,33 @@ export const PEOPLE_ART = {
   }),
 };
 
+Object.assign(PEOPLE_ART, {
+  waiter: (c, skin, hc) => person('#FFFFFF', skin, { hairColor: hc, legs: '#1C2430', top: `<path d="M46 38 L50 42 L54 38" fill="${c}"/><rect x="40" y="54" width="20" height="14" fill="${c}"/>` }),
+  student: (c, skin, hc) => person(c, skin, { hairColor: hc, hair: bunHair, legs: '#3E5C8A', back: `<rect x="58" y="40" width="12" height="20" rx="3" fill="${shade(c, -24)}"/>` }),
+  astronaut: (c, skin) => `${sh(50, 96, 16)}
+    <rect x="40" y="62" width="9" height="32" rx="4" fill="#F4F6F8"/><rect x="51" y="62" width="9" height="32" rx="4" fill="#E2E7EC"/>
+    <rect x="36" y="36" width="28" height="32" rx="8" fill="${F('#F4F6F8', 4, -12)}"/><rect x="44" y="46" width="12" height="8" rx="2" fill="${c}"/>
+    <path d="M36 42 Q28 50 30 62 M64 42 Q72 50 70 62" stroke="#E2E7EC" stroke-width="7" stroke-linecap="round" fill="none"/>
+    <circle cx="50" cy="22" r="15" fill="${F('#F4F6F8', 4, -10)}"/><ellipse cx="50" cy="23" rx="10" ry="8" fill="${F('#22303D', 20, 0)}"/>
+    <ellipse cx="46" cy="20" rx="3" ry="2" fill="#FFFFFF" opacity=".5"/>`,
+  pilot: (c, skin, hc) => person('#FFFFFF', skin, { hairColor: hc, legs: '#1C2430',
+    top: `<rect x="37" y="40" width="26" height="4" fill="${c}"/><path d="M40 46 L46 46 M54 46 L60 46" stroke="#F2C14E" stroke-width="1.6"/>`,
+    hat: `<path d="M40 14 Q50 6 60 14 L60 17 L40 17 Z" fill="${c}"/><rect x="38" y="16" width="24" height="2.6" rx="1.2" fill="${DARK}"/><circle cx="50" cy="12" r="1.6" fill="#F2C14E"/>` }),
+  lifeguard: (c, skin, hc) => person(c, skin, { hairColor: hc, legs: c, front: `<path d="M44 46 L56 46" stroke="#FFFFFF" stroke-width="2"/><path d="M66 60 L74 52" stroke="${DARK}" stroke-width="1"/><circle cx="76" cy="50" r="3" fill="#F2C14E"/>` }),
+  gardener: (c, skin, hc) => person(c, skin, { hairColor: hc, legs: '#3E5C8A',
+    top: `<path d="M40 50 L60 50 L60 68 L40 68 Z" fill="${shade(c, -14)}"/>`,
+    hat: `<ellipse cx="50" cy="15" rx="16" ry="3.4" fill="#E8D29A"/><path d="M42 15 Q42 6 50 6 Q58 6 58 15 Z" fill="#E8D29A"/>` }),
+  wizard: (c, skin) => `${sh(50, 96, 16)}
+    <path d="M36 40 L32 94 L68 94 L64 40 Z" fill="${F(c, 8, -12)}"/>
+    <path d="M36 42 Q28 52 30 64 M64 42 Q72 52 70 64" stroke="${c}" stroke-width="6" stroke-linecap="round" fill="none"/>
+    <ellipse cx="50" cy="26" rx="9" ry="10" fill="${skin}"/>
+    <path d="M42 30 Q50 50 58 30 Q54 34 50 34 Q46 34 42 30 Z" fill="#E9E4DA"/>
+    <circle cx="46.5" cy="24" r="1.1" fill="${DARK}"/><circle cx="53.5" cy="24" r="1.1" fill="${DARK}"/>
+    <path d="M36 18 L50 -6 L64 18 Z" fill="${F(c, 12, -6)}"/><ellipse cx="50" cy="18" rx="17" ry="3.4" fill="${shade(c, -16)}"/>
+    <path d="M70 64 L80 30" stroke="#8C5E35" stroke-width="2.4"/><circle cx="80" cy="29" r="3" fill="#F2C14E"/>`,
+  shopkeeper: (c, skin, hc) => person(c, skin, { hairColor: hc, hair: bunHair, legs: '#5B6B7A', top: `<path d="M41 46 L59 46 L60 70 L40 70 Z" fill="#FFFFFF"/>` }),
+});
+
 // ---------------- dress-up character (box 0 0 200 420) ----------------
 // One connected body: the skin silhouette is a single path, so there are no separate parts.
 export const DRESS_SLOTS = ['hairBack', 'bottom', 'feet', 'top', 'dress', 'outer', 'neck'];
@@ -803,6 +830,10 @@ const CLOTHES = {
   sneakers: { slot: 'feet', d: (c) => `<path d="M66 392 Q66 384 74 384 L90 384 L92 412 L60 412 Q58 404 66 400 Z M134 392 Q134 384 126 384 L110 384 L108 412 L140 412 Q142 404 134 400 Z" fill="${F(c, 10, -10)}"/><path d="M58 410 L92 410 M108 410 L142 410" stroke="#FFFFFF" stroke-width="4"/>` },
   shoes: { slot: 'feet', d: (c) => `<path d="M64 402 Q64 392 76 392 L90 392 L90 412 L58 412 Q58 406 64 402 Z M136 402 Q136 392 124 392 L110 392 L110 412 L142 412 Q142 406 136 402 Z" fill="${F(c, 14, -10)}"/>` },
   boots: { slot: 'feet', d: (c) => `<path d="M70 344 L92 344 L92 412 L60 412 Q58 400 70 396 Z M130 344 L108 344 L108 412 L140 412 Q142 400 130 396 Z" fill="${F(c, 8, -12)}"/><path d="M70 352 L92 352 M108 352 L130 352" stroke="${shade(c, -20)}" stroke-width="3"/>` },
+  sweater: { slot: 'top', d: (c) => `<path d="M86 108 Q100 116 114 108 Q134 114 142 126 Q148 140 150 160 L158 234 L144 236 L134 170 L134 218 L66 218 L66 170 L56 236 L42 234 L50 160 Q52 140 58 126 Q66 114 86 108 Z" fill="${F(c, 10, -12)}"/><path d="M86 108 Q100 120 114 108" stroke="${shade(c, -20)}" stroke-width="5" fill="none"/><path d="M66 210 L134 210 M56 226 L42 224 M144 226 L158 224" stroke="${shade(c, -16)}" stroke-width="5"/>${[140, 160, 180].map((y) => `<path d="M72 ${y} L128 ${y}" stroke="${shade(c, 14)}" stroke-width="2" stroke-dasharray="4 4"/>`).join('')}` },
+  coat_long: { slot: 'outer', d: (c) => `<path d="M86 108 L96 330 L60 330 L64 172 L55 238 L41 236 L50 158 Q52 136 58 126 Q68 114 86 108 Z M114 108 L104 330 L140 330 L136 172 L145 238 L159 236 L150 158 Q148 136 142 126 Q132 114 114 108 Z" fill="${F(c, 10, -14)}"/><path d="M68 214 L132 214" stroke="${shade(c, -20)}" stroke-width="6"/><circle cx="94" cy="160" r="3" fill="${DARK}"/><circle cx="94" cy="190" r="3" fill="${DARK}"/>` },
+  overalls: { slot: 'dress', d: (c) => `<path d="M82 112 L88 112 L92 150 L108 150 L112 112 L118 112 L124 150 L134 210 L134 228 L128 392 L112 392 L102 252 L98 252 L88 392 L72 392 L66 228 L66 210 L76 150 Z" fill="${F(c, 8, -12)}"/><rect x="86" y="160" width="28" height="22" rx="3" fill="${shade(c, -10)}"/><circle cx="84" cy="152" r="3" fill="#E6B43C"/><circle cx="116" cy="152" r="3" fill="#E6B43C"/>` },
+  sandals: { slot: 'feet', d: (c) => `<path d="M62 408 L92 408 L92 412 L60 412 Z M108 408 L140 408 L140 412 L108 412 Z" fill="${shade(c, -20)}"/><path d="M72 396 L88 404 M72 404 L88 396 M112 396 L128 404 M112 404 L128 396" stroke="${c}" stroke-width="4" stroke-linecap="round"/>` },
   scarf: { slot: 'neck', d: (c) => `<path d="M84 104 Q100 118 116 104 L118 118 Q100 132 82 118 Z" fill="${F(c, 10, -10)}"/><path d="M106 122 L118 196 L102 198 L96 126 Z" fill="${F(c, 6, -14)}"/>` },
 };
 
@@ -821,6 +852,9 @@ export const ACCESSORIES = {
   backpack: { box: [130, 120, 48, 80], d: (c) => `<rect x="4" y="10" width="40" height="66" rx="12" fill="${F(c)}"/><rect x="10" y="44" width="28" height="22" rx="5" fill="${shade(c, -10)}"/><path d="M14 10 Q24 0 34 10" stroke="${shade(c, -20)}" stroke-width="3" fill="none"/>` },
   bag: { box: [120, 120, 60, 120], d: (c) => `<path d="M2 2 L44 92" stroke="${shade(c, -20)}" stroke-width="3"/><rect x="30" y="86" width="30" height="28" rx="6" fill="${F(c)}"/><rect x="30" y="94" width="30" height="4" fill="${shade(c, -16)}"/>` },
   headphones: { box: [64, 24, 72, 60], d: (c) => `<path d="M8 42 L8 30 Q8 4 36 4 Q64 4 64 30 L64 42" fill="none" stroke="${shade(c, -10)}" stroke-width="5"/><rect x="0" y="36" width="14" height="22" rx="6" fill="${F(c)}"/><rect x="58" y="36" width="14" height="22" rx="6" fill="${F(c)}"/>` },
+  bracelet: { box: [42, 226, 18, 10], d: (c) => `<ellipse cx="9" cy="5" rx="8" ry="4" fill="none" stroke="${c}" stroke-width="3"/>` },
+  hairclip: { box: [76, 34, 22, 10], d: (c) => `<rect x="1" y="1" width="20" height="8" rx="4" fill="${F(c)}"/><circle cx="6" cy="5" r="1.6" fill="#FFFFFF"/>` },
+  wings: { box: [20, 100, 160, 140], d: (c) => `<path d="M80 40 Q40 -10 6 20 Q0 60 40 70 Q10 100 30 130 Q60 130 78 70 Z M80 40 Q120 -10 154 20 Q160 60 120 70 Q150 100 130 130 Q100 130 82 70 Z" fill="${c}" opacity=".7"/><path d="M80 40 Q40 10 14 26 M80 40 Q120 10 146 26" stroke="#FFFFFF" stroke-width="2" fill="none" opacity=".8"/>` },
   bow: { box: [110, 22, 34, 20], d: (c) => `<path d="M17 10 L2 2 L2 18 Z M17 10 L32 2 L32 18 Z" fill="${F(c)}"/><circle cx="17" cy="10" r="4" fill="${shade(c, -14)}"/>` },
 };
 

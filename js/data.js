@@ -37,7 +37,9 @@ export const TEXTURES = {
   floor: ['wood', 'tiles', 'checks', 'carpet', 'stone', 'plain'],
   sky: ['plain', 'sunset', 'night', 'clouds'],
   grass: ['plain', 'flowers', 'stripes', 'sand'],
-  road: ['asphalt', 'dirt', 'checks'],
+  road: ['asphalt', 'dirt', 'checks', 'stone'],
+  ground: ['asphalt', 'stone', 'dirt', 'plain', 'checks'],
+  sand: ['sand', 'plain', 'stone'],
 };
 export const TEXTURE_NAMES = {
   plain: 'חלק', stripes: 'פסים', dots: 'נקודות', bricks: 'לבנים', wood: 'עץ', checks: 'משבצות', flowers: 'פרחים', waves: 'גלים',
@@ -79,7 +81,7 @@ export const PLACES = [
     ],
   },
   {
-    id: 'dressup', he: 'דמות להלבשה', en: 'Dress-up',
+    id: 'dressup', he: 'סטודיו דמויות', en: 'Character studio',
     surfaces: [{ id: 'wall', en: 'wall', he: 'קיר', color: '#E3F0F4', tex: 'plain' }],
     split: 100,
     cats: [
@@ -122,7 +124,35 @@ export const PLACES = [
   },
 ];
 
-// Places that come later. Shown with a lock on the place screen.
+// More worlds. Players unlock them by points (see RANKS); test mode opens everything.
+const W = (id, he, en, surfaces, split, cats) => ({ id, he, en, surfaces, split, cats, locked: true });
+const S = (id, en, he, color, tex) => ({ id, en, he, color, tex });
+const C = (id, he, en) => ({ id, he, en });
+PLACES.push(
+  { id: 'coloring', he: 'עולם הצביעה לקטנים', en: 'Coloring for little kids', coloring: true, locked: true, surfaces: [], cats: [] },
+  W('garden', 'גינה', 'Garden', [S('sky', 'sky', 'שמיים', '#B5E2F5', 'plain'), S('grass', 'grass', 'דשא', '#6FB85F', 'stripes')], 58,
+    [C('plants', 'צמחים', 'Plants'), C('tools', 'כלים', 'Tools'), C('animals', 'חיות', 'Animals'), C('people', 'אנשים', 'People')]),
+  W('kitchen', 'מטבח', 'Kitchen', [S('wall', 'wall', 'קיר', '#F4F2EC', 'tiles'), S('floor', 'floor', 'רצפה', '#9AA7B4', 'checks')], 64,
+    [C('appliances', 'מכשירים', 'Appliances'), C('furniture', 'רהיטים', 'Furniture'), C('dishes', 'כלים', 'Dishes'), C('food', 'אוכל', 'Food'), C('people', 'אנשים', 'People')]),
+  W('beach', 'חוף ים', 'Beach', [S('sky', 'sky', 'שמיים', '#9FD8F2', 'plain'), S('sand', 'sand', 'חול', '#E8D29A', 'sand')], 52,
+    [C('beach', 'חוף', 'Beach'), C('sea', 'ים', 'Sea'), C('animals', 'חיות', 'Animals'), C('people', 'אנשים', 'People')]),
+  W('street', 'רחוב', 'Street', [S('sky', 'sky', 'שמיים', '#B5E2F5', 'plain'), S('road', 'road', 'כביש', '#6E7A86', 'asphalt')], 60,
+    [C('buildings', 'בניינים', 'Buildings'), C('signs', 'שלטים', 'Signs'), C('vehicles', 'כלי רכב', 'Vehicles'), C('people', 'אנשים', 'People')]),
+  W('restaurant', 'מסעדה', 'Restaurant', [S('wall', 'wall', 'קיר', '#F2D9C4', 'stripes'), S('floor', 'floor', 'רצפה', '#B98653', 'wood')], 62,
+    [C('furniture', 'רהיטים', 'Furniture'), C('food', 'אוכל', 'Food'), C('dishes', 'כלים', 'Dishes'), C('people', 'אנשים', 'People')]),
+  W('classroom', 'כיתה', 'Classroom', [S('wall', 'wall', 'קיר', '#DDEFE0', 'plain'), S('floor', 'floor', 'רצפה', '#C99A6B', 'wood')], 64,
+    [C('furniture', 'רהיטים', 'Furniture'), C('school', 'ציוד', 'School things'), C('people', 'אנשים', 'People')]),
+  W('airport', 'שדה תעופה', 'Airport', [S('sky', 'sky', 'שמיים', '#A9DDF3', 'clouds'), S('road', 'runway', 'מסלול', '#5B6772', 'asphalt')], 56,
+    [C('vehicles', 'כלי טיס ורכב', 'Vehicles'), C('things', 'חפצים', 'Things'), C('people', 'אנשים', 'People')]),
+  W('forest', 'יער קסום', 'Magic forest', [S('sky', 'sky', 'שמיים', '#4E3F86', 'night'), S('grass', 'grass', 'דשא', '#3F8F56', 'flowers')], 56,
+    [C('magic', 'קסם', 'Magic'), C('nature', 'טבע', 'Nature'), C('animals', 'חיות', 'Animals'), C('people', 'אנשים', 'People')]),
+  W('graffiti', 'קיר גרפיטי', 'Graffiti wall', [S('wall', 'wall', 'קיר', '#B5574F', 'bricks'), S('ground', 'ground', 'רצפה', '#6E7A86', 'asphalt')], 78,
+    [C('art', 'ציורים', 'Art'), C('words', 'מילים', 'Words'), C('tools', 'כלים', 'Tools'), C('people', 'אנשים', 'People')]),
+  W('moon', 'הירח', 'The moon', [S('sky', 'sky', 'שמיים', '#101C3A', 'night'), S('ground', 'ground', 'קרקע', '#AEB6BF', 'stone')], 60,
+    [C('space', 'חלל', 'Space'), C('vehicles', 'כלי רכב', 'Vehicles'), C('people', 'אנשים', 'People')]),
+);
+
+// (kept for reference: the old list of coming places)
 export const FUTURE_PLACES = [
   { id: 'coloring', he: 'עולם הצביעה לקטנים', en: 'Coloring for little kids' },
   { id: 'kitchen', he: 'מטבח', en: 'Kitchen' },
@@ -257,22 +287,210 @@ export const ITEMS = [
   { id: 'crown', en: 'crown', he: 'כתר', place: 'dressup', cat: 'accessories', acc: ['crown'], color: '#E6B43C', rare: true },
 ];
 
+
+// ---------- more items (feedback round 2) ----------
+const IT = (id, en, he, place, cat, art, color, w, extra = {}) => ({ id, en, he, place, cat, art, color, w, ...extra });
+ITEMS.push(
+  // bedroom extras
+  IT('tv', 'TV', 'טלוויזיה', 'bedroom', 'things', ['tv'], '#2B3440', 26),
+  IT('computer', 'computer', 'מחשב', ['bedroom', 'classroom'], ['things', 'school'], ['computer'], '#E2E7EC', 18),
+  IT('phone', 'phone', 'טלפון', 'bedroom', 'things', ['phone'], '#2F7BC0', 6),
+  IT('toy_box', 'toy box', 'ארגז צעצועים', 'bedroom', 'things', ['toy_box'], '#8A5CC8', 20),
+  IT('beanbag', 'beanbag', 'פוף', 'bedroom', 'furniture', ['beanbag'], '#F08A2E', 18),
+  IT('basket', 'basket', 'סל', ['bedroom', 'kitchen'], ['things', 'dishes'], ['basket'], '#C08A55', 12),
+  IT('candle', 'candle', 'נר', ['bedroom', 'restaurant'], ['lights', 'furniture'], ['candle'], '#F7F6F2', 5),
+  // park extras
+  IT('picnic_table', 'picnic table', 'שולחן פיקניק', 'park', 'things', ['picnic_table'], '#9A6338', 30),
+  IT('sandbox', 'sandbox', 'ארגז חול', 'park', 'play', ['sandbox'], '#B98653', 30),
+  IT('balloon', 'balloon', 'בלון', ['park', 'restaurant'], ['things', 'furniture'], ['balloon'], '#E0453B', 8),
+  IT('ice_cream_cart', 'ice cream cart', 'עגלת גלידה', 'park', 'things', ['ice_cream_cart'], '#2EC4B6', 22),
+  // track extras
+  IT('grandstand', 'grandstand', 'יציע', 'track', 'track', ['grandstand'], '#2F7BC0', 44),
+  IT('podium', 'podium', 'פודיום', 'track', 'special', ['podium'], '#E2E7EC', 22),
+  IT('fuel_pump', 'fuel pump', 'משאבת דלק', 'track', 'track', ['fuel_pump'], '#E0453B', 10),
+  IT('garage', 'garage', 'מוסך', 'track', 'track', ['garage'], '#E9E4DA', 30),
+  // garden
+  IT('sunflower', 'sunflower', 'חמנייה', 'garden', 'plants', ['sunflower'], '#F2C230', 10),
+  IT('tulip', 'tulip', 'צבעוני', 'garden', 'plants', ['tulip'], '#E0453B', 6),
+  IT('garden_flower', 'flower', 'פרח', 'garden', 'plants', ['daisy', 'flower'], '#F7F6F2', 6),
+  IT('garden_tree', 'tree', 'עץ', 'garden', 'plants', ['tree', 'tree_pine'], '#4FA35E', 26),
+  IT('garden_bush', 'bush', 'שיח', 'garden', 'plants', ['bush'], '#3F8F56', 16),
+  IT('carrot', 'carrot', 'גזר', 'garden', 'plants', ['carrot'], '#F08A2E', 7),
+  IT('pumpkin', 'pumpkin', 'דלעת', 'garden', 'plants', ['pumpkin'], '#F08A2E', 14),
+  IT('tomato', 'tomato', 'עגבנייה', 'garden', 'plants', ['tomato_plant'], '#E0453B', 12),
+  IT('watering_can', 'watering can', 'משפך', 'garden', 'tools', ['watering_can'], '#3FA66A', 12),
+  IT('shovel', 'shovel', 'את חפירה', 'garden', 'tools', ['shovel'], '#8E9AA6', 8),
+  IT('wheelbarrow', 'wheelbarrow', 'מריצה', 'garden', 'tools', ['wheelbarrow'], '#E0453B', 22),
+  IT('birdhouse', 'birdhouse', 'בית ציפורים', 'garden', 'tools', ['birdhouse'], '#2EC4B6', 10),
+  IT('fence', 'fence', 'גדר', 'garden', 'tools', ['fence'], '#F7F6F2', 30),
+  IT('gnome', 'gnome', 'גמד גינה', 'garden', 'tools', ['gnome'], '#E0453B', 8),
+  IT('bee', 'bee', 'דבורה', 'garden', 'animals', ['bee'], '#F2C230', 6),
+  IT('ladybug', 'ladybug', 'פרת משה רבנו', 'garden', 'animals', ['ladybug'], '#E0453B', 6),
+  IT('snail', 'snail', 'חילזון', 'garden', 'animals', ['snail'], '#C08A55', 9),
+  IT('garden_butterfly', 'butterfly', 'פרפר', 'garden', 'animals', ['butterfly'], '#8A5CC8', 7),
+  IT('garden_bird', 'bird', 'ציפור', 'garden', 'animals', ['bird'], '#E0453B', 8),
+  // kitchen
+  IT('fridge', 'fridge', 'מקרר', 'kitchen', 'appliances', ['fridge'], '#E2E7EC', 22),
+  IT('stove', 'stove', 'כיריים', 'kitchen', 'appliances', ['stove'], '#F7F6F2', 24),
+  IT('sink', 'sink', 'כיור', 'kitchen', 'appliances', ['sink'], '#2EC4B6', 26),
+  IT('microwave', 'microwave', 'מיקרוגל', 'kitchen', 'appliances', ['microwave'], '#8E9AA6', 16),
+  IT('kettle', 'kettle', 'קומקום', 'kitchen', 'appliances', ['kettle'], '#E0453B', 9),
+  IT('toaster', 'toaster', 'טוסטר', 'kitchen', 'appliances', ['toaster'], '#B7C3CE', 11),
+  IT('cabinet', 'cabinet', 'ארון מטבח', 'kitchen', 'furniture', ['cabinet'], '#3FA66A', 30),
+  IT('kitchen_table', 'table', 'שולחן', ['kitchen', 'restaurant'], 'furniture', ['table_wood', 'table_round'], '#B98653', 24),
+  IT('kitchen_chair', 'chair', 'כיסא', ['kitchen', 'restaurant', 'classroom'], 'furniture', ['chair_wood'], '#2EC4B6', 12),
+  IT('pot', 'pot', 'סיר', 'kitchen', 'dishes', ['pot'], '#8E9AA6', 12),
+  IT('pan', 'pan', 'מחבת', 'kitchen', 'dishes', ['pan'], '#2B3440', 14),
+  IT('plate', 'plate', 'צלחת', ['kitchen', 'restaurant'], 'dishes', ['plate'], '#F7F6F2', 10),
+  IT('cup', 'cup', 'כוס', ['kitchen', 'restaurant'], 'dishes', ['cup'], '#2F7BC0', 7),
+  IT('bowl', 'bowl', 'קערה', 'kitchen', 'dishes', ['bowl'], '#F7F6F2', 11),
+  IT('apple', 'apple', 'תפוח', ['kitchen', 'classroom'], ['food', 'school'], ['apple'], '#E0453B', 6),
+  IT('banana', 'banana', 'בננה', 'kitchen', 'food', ['banana'], '#F2C230', 8),
+  IT('bread', 'bread', 'לחם', 'kitchen', 'food', ['bread'], '#D9A65B', 10),
+  IT('cake', 'cake', 'עוגה', ['kitchen', 'restaurant'], 'food', ['cake'], '#EE7BAA', 12),
+  // beach
+  IT('beach_umbrella', 'umbrella', 'שמשייה', 'beach', 'beach', ['beach_umbrella'], '#E0453B', 24),
+  IT('towel', 'towel', 'מגבת', 'beach', 'beach', ['towel'], '#2F7BC0', 24),
+  IT('sandcastle', 'sandcastle', 'ארמון חול', 'beach', 'beach', ['sandcastle'], '#E2C27E', 22),
+  IT('sand_bucket', 'bucket', 'דלי', 'beach', 'beach', ['sand_bucket'], '#2EC4B6', 10),
+  IT('beach_ball', 'ball', 'כדור', 'beach', 'beach', ['ball'], '#F2C230', 7),
+  IT('palm_tree', 'palm tree', 'עץ דקל', 'beach', 'beach', ['tree_palm'], '#3FA66A', 24),
+  IT('surfboard', 'surfboard', 'גלשן', 'beach', 'sea', ['surfboard'], '#2EC4B6', 8),
+  IT('boat', 'boat', 'סירה', 'beach', 'sea', ['boat'], '#E0453B', 24),
+  IT('sea', 'sea', 'ים', 'beach', 'sea', ['sea'], '#2F9BD0', 60),
+  IT('shell', 'shell', 'צדף', 'beach', 'animals', ['shell'], '#F7B9B0', 6),
+  IT('starfish', 'starfish', 'כוכב ים', 'beach', 'animals', ['starfish'], '#F08A2E', 7),
+  IT('crab', 'crab', 'סרטן', 'beach', 'animals', ['crab'], '#E0453B', 9),
+  IT('beach_fish', 'fish', 'דג', 'beach', 'animals', ['aquarium'], '#F08A2E', 14),
+  // street
+  IT('house', 'house', 'בית', 'street', 'buildings', ['house'], '#F2D9C4', 30),
+  IT('shop', 'shop', 'חנות', 'street', 'buildings', ['shop'], '#2EC4B6', 30),
+  IT('building', 'building', 'בניין', 'street', 'buildings', ['building'], '#8E9AA6', 26),
+  IT('mailbox', 'mailbox', 'תיבת דואר', 'street', 'signs', ['mailbox'], '#2F7BC0', 8),
+  IT('stop_sign', 'stop sign', 'תמרור עצור', 'street', 'signs', ['stop_sign'], '#E0453B', 8),
+  IT('fire_hydrant', 'fire hydrant', 'ברז כיבוי', 'street', 'signs', ['fire_hydrant'], '#E0453B', 7),
+  IT('bus_stop', 'bus stop', 'תחנת אוטובוס', 'street', 'signs', ['bus_stop'], '#2F7BC0', 30),
+  IT('street_light', 'streetlight', 'פנס רחוב', 'street', 'signs', ['streetlight'], '#3A4652', 10),
+  IT('street_traffic_light', 'traffic light', 'רמזור', 'street', 'signs', ['traffic_light'], '#2B3440', 7),
+  IT('street_car', 'car', 'מכונית', 'street', 'vehicles', ['city_car', 'sports_car'], '#2F7BC0', 22),
+  IT('street_bus', 'bus', 'אוטובוס', 'street', 'vehicles', ['bus'], '#F2C230', 26),
+  IT('street_bike', 'bicycle', 'אופניים', 'street', 'vehicles', ['bicycle'], '#E0453B', 16),
+  IT('street_tree', 'tree', 'עץ', 'street', 'buildings', ['tree'], '#4FA35E', 20),
+  IT('street_bench', 'bench', 'ספסל', 'street', 'signs', ['bench'], '#3A4652', 20),
+  // restaurant
+  IT('menu', 'menu', 'תפריט', 'restaurant', 'furniture', ['menu'], '#2B3440', 12),
+  IT('sign_open', 'sign', 'שלט', 'restaurant', 'furniture', ['sign_open'], '#E0453B', 18),
+  IT('pizza', 'pizza', 'פיצה', 'restaurant', 'food', ['pizza'], '#E2B84A', 14),
+  IT('burger', 'burger', 'המבורגר', 'restaurant', 'food', ['burger'], '#7A4A2A', 10),
+  IT('ice_cream', 'ice cream', 'גלידה', 'restaurant', 'food', ['ice_cream'], '#F7B9D0', 6),
+  IT('salad', 'salad', 'סלט', 'restaurant', 'food', ['salad'], '#F7F6F2', 11),
+  IT('juice', 'juice', 'מיץ', 'restaurant', 'food', ['juice'], '#F08A2E', 6),
+  IT('restaurant_plant', 'plant', 'עציץ', 'restaurant', 'furniture', ['plant'], '#E9E4DA', 10),
+  // classroom
+  IT('blackboard', 'blackboard', 'לוח', 'classroom', 'furniture', ['blackboard'], '#2F6B4F', 40),
+  IT('school_desk', 'desk', 'שולחן', 'classroom', 'furniture', ['school_desk'], '#B98653', 22),
+  IT('globe', 'globe', 'גלובוס', 'classroom', 'school', ['globe'], '#3FA66A', 10),
+  IT('pencil', 'pencil', 'עיפרון', 'classroom', 'school', ['pencil'], '#F2C230', 8),
+  IT('ruler', 'ruler', 'סרגל', 'classroom', 'school', ['ruler'], '#2EC4B6', 12),
+  IT('scissors', 'scissors', 'מספריים', 'classroom', 'school', ['scissors'], '#E0453B', 8),
+  IT('crayons', 'crayons', 'צבעים', 'classroom', 'school', ['crayons'], '#2F7BC0', 10),
+  IT('map', 'map', 'מפה', 'classroom', 'school', ['map'], '#3FA66A', 22),
+  IT('class_book', 'book', 'ספר', 'classroom', 'school', ['book', 'book_open'], '#E0453B', 9),
+  IT('class_clock', 'clock', 'שעון', 'classroom', 'furniture', ['clock'], '#F7F6F2', 8),
+  // airport
+  IT('airplane', 'airplane', 'מטוס', 'airport', 'vehicles', ['airplane'], '#2F7BC0', 44),
+  IT('helicopter', 'helicopter', 'מסוק', 'airport', 'vehicles', ['helicopter'], '#E0453B', 24),
+  IT('airport_truck', 'truck', 'משאית', 'airport', 'vehicles', ['truck'], '#F2C230', 22),
+  IT('control_tower', 'control tower', 'מגדל פיקוח', 'airport', 'things', ['control_tower'], '#E2E7EC', 18),
+  IT('suitcase', 'suitcase', 'מזוודה', 'airport', 'things', ['suitcase'], '#8A5CC8', 9),
+  IT('windsock', 'windsock', 'שק רוח', 'airport', 'things', ['windsock'], '#F08A2E', 14),
+  IT('airport_cone', 'cone', 'קונוס', 'airport', 'things', ['cone'], '#F08A2E', 6),
+  // magic forest
+  IT('mushroom', 'mushroom', 'פטרייה', 'forest', 'magic', ['mushroom'], '#E0453B', 12),
+  IT('castle', 'castle', 'טירה', 'forest', 'magic', ['castle'], '#B7C3CE', 40),
+  IT('wand', 'wand', 'שרביט', 'forest', 'magic', ['wand'], '#F2C230', 10),
+  IT('crystal', 'crystal', 'קריסטל', 'forest', 'magic', ['crystal'], '#8A5CC8', 12),
+  IT('fairy_house', 'fairy house', 'בית פיות', 'forest', 'magic', ['fairy_house'], '#8A5CC8', 18),
+  IT('rainbow', 'rainbow', 'קשת', ['forest', 'graffiti'], ['magic', 'art'], ['rainbow'], '#FFFFFF', 36),
+  IT('forest_tree', 'tree', 'עץ', 'forest', 'nature', ['tree', 'tree_pine'], '#2F7D4A', 26),
+  IT('forest_flower', 'flower', 'פרח', 'forest', 'nature', ['flower', 'daisy'], '#2EC4B6', 7),
+  IT('owl', 'owl', 'ינשוף', 'forest', 'animals', ['owl'], '#9A6338', 10),
+  IT('fox', 'fox', 'שועל', 'forest', 'animals', ['fox'], '#F08A2E', 14),
+  IT('deer', 'deer', 'אייל', 'forest', 'animals', ['deer'], '#B5784A', 18),
+  IT('forest_rabbit', 'rabbit', 'ארנב', 'forest', 'animals', ['rabbit'], '#D9D2C8', 10),
+  IT('dragon', 'dragon', 'דרקון', 'forest', 'animals', ['dragon'], '#3FA66A', 26, { rare: true }),
+  IT('forest_unicorn', 'unicorn', 'חד-קרן', 'forest', 'animals', ['unicorn'], '#B98BE0', 24),
+  // graffiti wall
+  IT('spray_can', 'spray can', 'ספריי', 'graffiti', 'tools', ['spray_can'], '#2EC4B6', 8),
+  IT('ladder', 'ladder', 'סולם', 'graffiti', 'tools', ['ladder'], '#B7C3CE', 14),
+  IT('paint_bucket', 'paint', 'צבע', 'graffiti', 'tools', ['paint_bucket'], '#8A5CC8', 10),
+  IT('star', 'star', 'כוכב', ['graffiti', 'moon'], ['art', 'space'], ['star'], '#F2C230', 12),
+  IT('heart', 'heart', 'לב', 'graffiti', 'art', ['heart'], '#E0453B', 12),
+  IT('lightning', 'lightning', 'ברק', 'graffiti', 'art', ['lightning'], '#F2C230', 12),
+  IT('arrow', 'arrow', 'חץ', 'graffiti', 'art', ['arrow'], '#2EC4B6', 18),
+  IT('smiley', 'smiley', 'סמיילי', 'graffiti', 'art', ['smiley'], '#F2C230', 12),
+  IT('splash', 'splash', 'כתם', 'graffiti', 'art', ['splash'], '#8A5CC8', 16),
+  IT('crown_sign', 'crown', 'כתר', 'graffiti', 'art', ['crown_sign'], '#E6B43C', 16),
+  IT('tag_wow', 'wow', 'וואו', 'graffiti', 'words', ['tag_wow'], '#EE7BAA', 26),
+  IT('tag_hi', 'hi', 'היי', 'graffiti', 'words', ['tag_hi'], '#2F7BC0', 20),
+  IT('tag_cool', 'cool', 'מגניב', 'graffiti', 'words', ['tag_cool'], '#3FA66A', 26),
+  // moon
+  IT('planet', 'planet', 'כוכב לכת', 'moon', 'space', ['planet'], '#E59A4A', 18),
+  IT('earth', 'Earth', 'כדור הארץ', 'moon', 'space', ['earth'], '#3FA66A', 18),
+  IT('satellite', 'satellite', 'לוויין', 'moon', 'space', ['satellite'], '#E2E7EC', 20),
+  IT('shooting_star', 'shooting star', 'כוכב נופל', 'moon', 'space', ['shooting_star'], '#F2C230', 16),
+  IT('crater', 'crater', 'מכתש', 'moon', 'space', ['crater'], '#AEB6BF', 26),
+  IT('alien', 'alien', 'חייזר', 'moon', 'space', ['alien'], '#56B870', 10),
+  IT('moon_rocket', 'rocket', 'טיל', 'moon', 'vehicles', ['rocket'], '#2F7BC0', 16),
+  IT('moon_rover', 'moon rover', 'רכב ירח', 'moon', 'vehicles', ['moon_rover'], '#E2E7EC', 22),
+  IT('moon_flag', 'flag', 'דגל', 'moon', 'space', ['flag'], '#2F7BC0', 12),
+  IT('ufo', 'UFO', 'עב"ם', 'moon', 'vehicles', ['ufo'], '#8A5CC8', 22, { rare: true }),
+  // people for the new worlds
+  IT('waiter', 'waiter', 'מלצר/ית', 'restaurant', 'people', null, '#E0453B', 10, { person: 'waiter' }),
+  IT('student', 'student', 'תלמיד/ה', 'classroom', 'people', null, '#2F7BC0', 10, { person: 'student' }),
+  IT('astronaut', 'astronaut', 'אסטרונאוט/ית', 'moon', 'people', null, '#2F7BC0', 11, { person: 'astronaut' }),
+  IT('pilot', 'pilot', 'טייס/ת', 'airport', 'people', null, '#1C2430', 10, { person: 'pilot' }),
+  IT('lifeguard', 'lifeguard', 'מציל/ה', 'beach', 'people', null, '#E0453B', 10, { person: 'lifeguard' }),
+  IT('gardener', 'gardener', 'גנן/ית', 'garden', 'people', null, '#3FA66A', 10, { person: 'gardener' }),
+  IT('wizard', 'wizard', 'קוסם/ת', 'forest', 'people', null, '#4E3F86', 11, { person: 'wizard' }),
+  IT('shopkeeper', 'shopkeeper', 'מוכר/ת', 'street', 'people', null, '#2EC4B6', 10, { person: 'shopkeeper' }),
+  IT('artist', 'artist', 'אמן/ית', 'graffiti', 'people', null, '#F08A2E', 10, { person: 'teen' }),
+  // dress-up extras
+  { id: 'sweater', en: 'sweater', he: 'סוודר', place: 'dressup', cat: 'tops', dress: ['sweater'], color: '#E0453B' },
+  { id: 'coat', en: 'coat', he: 'מעיל ארוך', place: 'dressup', cat: 'outer', dress: ['coat_long'], color: '#9A6338' },
+  { id: 'overalls', en: 'overalls', he: 'אוברול', place: 'dressup', cat: 'outer', dress: ['overalls'], color: '#3E5C8A' },
+  { id: 'sandals', en: 'sandals', he: 'סנדלים', place: 'dressup', cat: 'shoes', dress: ['sandals'], color: '#9A6338' },
+  { id: 'bracelet', en: 'bracelet', he: 'צמיד', place: 'dressup', cat: 'accessories', acc: ['bracelet'], color: '#E6B43C' },
+  { id: 'hairclip', en: 'hair clip', he: 'סיכת שיער', place: 'dressup', cat: 'accessories', acc: ['hairclip'], color: '#EE7BAA' },
+  { id: 'wings', en: 'wings', he: 'כנפיים', place: 'dressup', cat: 'accessories', acc: ['wings'], color: '#B5E2F5', rare: true },
+);
+
+// Ranks: every rank gives a sticker, and many give a special item and/or open a new world.
 export const RANKS = [
-  { points: 0, he: 'מתחילים', en: 'Starter' },
-  { points: 60, he: 'סקרנים', en: 'Explorer', prize: 'parrot' },
-  { points: 150, he: 'מעצבים', en: 'Designer', prize: 'crown' },
-  { points: 280, he: 'יוצרים', en: 'Creator', prize: 'fountain' },
-  { points: 450, he: 'אמנים', en: 'Artist', prize: 'unicorn' },
-  { points: 700, he: 'מומחים', en: 'Expert', prize: 'rocket' },
-  { points: 1000, he: 'אגדות', en: 'Legend' },
+  { points: 0, he: 'מתחילים', en: 'Starter', icon: 'seed', color: '#3FA66A' },
+  { points: 40, he: 'סקרנים', en: 'Explorer', icon: 'magnifier', color: '#2EC4B6', world: 'coloring' },
+  { points: 90, he: 'צבעונים', en: 'Colorful', icon: 'brush', color: '#F08A2E', world: 'garden', prize: 'parrot' },
+  { points: 150, he: 'מעצבים', en: 'Designer', icon: 'star', color: '#2F7BC0', world: 'kitchen', prize: 'crown' },
+  { points: 220, he: 'שוחים', en: 'Swimmer', icon: 'wave', color: '#2F9BD0', world: 'beach', prize: 'fountain' },
+  { points: 300, he: 'עירוניים', en: 'City kid', icon: 'house', color: '#8E9AA6', world: 'street', prize: 'wings' },
+  { points: 390, he: 'שפים', en: 'Chef', icon: 'heart', color: '#E0453B', world: 'restaurant', prize: 'unicorn' },
+  { points: 490, he: 'חכמים', en: 'Smart', icon: 'book', color: '#3FA66A', world: 'classroom' },
+  { points: 600, he: 'טייסים', en: 'Pilot', icon: 'plane', color: '#5A7BD8', world: 'airport', prize: 'rocket' },
+  { points: 720, he: 'קוסמים', en: 'Wizard', icon: 'wand', color: '#8A5CC8', world: 'forest', prize: 'dragon' },
+  { points: 850, he: 'אמנים', en: 'Artist', icon: 'spray', color: '#EE7BAA', world: 'graffiti' },
+  { points: 1000, he: 'אסטרונאוטים', en: 'Astronaut', icon: 'rocket', color: '#26292E', world: 'moon', prize: 'ufo' },
+  { points: 1200, he: 'מומחים', en: 'Expert', icon: 'trophy', color: '#E6B43C' },
+  { points: 1450, he: 'כוכבים', en: 'Superstar', icon: 'star', color: '#F2C230' },
+  { points: 1750, he: 'אגדות', en: 'Legend', icon: 'crown', color: '#E6B43C' },
 ];
 
-const inPlace = (it, placeId) => it.place === placeId || (Array.isArray(it.place) && it.place.includes(placeId)) || (it.place === '*' && placeId !== 'dressup');
+const inPlace = (it, placeId) => it.place === placeId || (Array.isArray(it.place) && it.place.includes(placeId)) || (it.place === '*' && !['dressup', 'coloring', 'moon'].includes(placeId));
 export function itemsFor(placeId) { return ITEMS.filter((it) => inPlace(it, placeId)); }
 export function catOf(it, placeId) {
   if (!Array.isArray(it.cat)) return it.cat;
   const i = Array.isArray(it.place) ? it.place.indexOf(placeId) : 0;
-  return it.cat[Math.max(0, i)];
+  return it.cat[Math.min(it.cat.length - 1, Math.max(0, i))];
 }
 export const itemById = (id) => ITEMS.find((it) => it.id === id);
 export const placeById = (id) => PLACES.find((p) => p.id === id);
+export const worldRank = (id) => RANKS.findIndex((r) => r.world === id);

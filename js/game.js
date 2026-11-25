@@ -1,11 +1,14 @@
 // Wordcraft – main game screen.
 import { ART, PEOPLE_ART, DRESS_ART, ACCESSORIES, SKINS, HAIR_COLORS, characterBase, svg, shade } from './art.js';
-import { PLACES, FUTURE_PLACES, ITEMS, COLORS, TEXTURES, TEXTURE_NAMES, ACTIONS, FEELINGS, RANKS, itemsFor, itemById, placeById, catOf } from './data.js';
+import { WORLD_ART, COLORING } from './art-worlds.js';
+import { PLACES, ITEMS, COLORS, TEXTURES, TEXTURE_NAMES, ACTIONS, FEELINGS, RANKS, itemsFor, itemById, placeById, catOf, worldRank } from './data.js';
 import { STR } from './i18n.js';
 import { sfx, setSound } from './sound.js';
 import { say } from './speech.js';
-import { state, save, resetAll, nextUid, recordWordResult, addPoints, learnWord, rankIndex, setDemo, replaceState } from './state.js';
-import { runWordTask, runSentenceTask, confirmBox, ICON } from './tasks.js';
+import { state, save, resetAll, nextUid, recordWordResult, addPoints, learnWord, rankIndex, setDemo, replaceState, newChar } from './state.js';
+import { runWordTask, runSentenceTask, runKidSay, confirmBox, ICON } from './tasks.js';
+
+Object.assign(ART, WORLD_ART);
 import { logoHTML } from './logo.js';
 
 const app = document.getElementById('app');
@@ -35,7 +38,32 @@ function artFor(item, inst = {}) {
   return svg(ART[item.art[inst.v || 0]](color));
 }
 const variantsOf = (item) => (item.art || item.dress || item.acc || [null]).length;
-const isLocked = (item) => item.rare && !state.unlocked.includes(item.id);
+const isLocked = (item) => item.rare && !state.unlocked.includes(item.id) && !state.test;
+const isOpen = (p) => !p.locked || state.test || rankIndex() >= worldRank(p.id);
+const curChar = () => state.chars[Math.min(state.charIdx, state.chars.length - 1)];
+const itemsOf = (pid) => (pid === 'dressup' ? curChar().acc : state.worlds[pid].items);
+const charById = (id) => state.chars.find((c) => c.id === id);
+const charName = (ch) => `${t().character} ${ch.n}`;
+const sceneWorlds = () => PLACES.filter((p) => !p.coloring && p.id !== 'dressup' && isOpen(p));
+
+// A finished character as one picture (used in rooms and as thumbnails). Box: 200x420.
+function charInner(ch) {
+  const base = characterBase(ch.skin, ch.feeling);
+  const layer = (slot) => { const s = ch.slots[slot]; if (!s) return ''; const it = itemById(s.id); return DRESS_ART[it.dress[s.v || 0]].d(s.color || it.color); };
+  const hairS = ch.slots.hair;
+  const hairD = hairS ? DRESS_ART[itemById('hair').dress[hairS.v || 0]] : null;
+  const accSvg = (a) => {
+    const it = itemById(a.id); if (!it) return '';
+    const A = ACCESSORIES[it.acc[a.v || 0]];
+    const cx = ((a.x - CH.left) / CH.w) * 200, cy = ((a.y - CH.top) / CH.h) * 420;
+    const aw = (a.w / CH.w) * 200, ah = aw * (A.box[3] / A.box[2]);
+    return `<g transform="translate(${cx} ${cy}) rotate(${a.rot || 0}) scale(${a.flip ? -1 : 1} 1)"><svg x="${-aw / 2}" y="${-ah / 2}" width="${aw}" height="${ah}" viewBox="0 0 ${A.box[2]} ${A.box[3]}" overflow="visible">${A.d(a.color || it.color)}</svg></g>`;
+  };
+  const behind = ch.acc.filter((a) => itemById(a.id)?.acc?.[a.v || 0] === 'wings');
+  const front = ch.acc.filter((a) => !behind.includes(a));
+  return behind.map(accSvg).join('') + (hairD && hairD.back ? hairD.back(hairS.color) : '') + base.body + layer('bottom') + layer('feet') + layer('top') + layer('dress') + layer('outer') + layer('neck') + base.head + layer('hair') + front.map(accSvg).join('');
+}
+const charSVG = (ch) => svg(charInner(ch), '0 0 200 420', 'overflow="visible"');
 const prizeRank = (id) => RANKS.findIndex((r) => r.prize === id);
 
 // ---------- textures (CSS backgrounds made from small SVG tiles) ----------
@@ -68,7 +96,9 @@ function render() {
   document.documentElement.lang = state.ui;
   document.documentElement.dir = t().dir;
   setSound(state.sound);
-  if (!view.place) renderHome(); else renderWorld();
+  if (!view.place) renderHome();
+  else if (placeById(view.place).coloring) renderColoring();
+  else renderWorld();
 }
 
 function header() {
@@ -99,8 +129,17 @@ function bindHeader() {
 // ---------- home: choose a place ----------
 function renderHome() {
   const cards = PLACES.map((p) => {
+    if (!isOpen(p)) {
+      const r = RANKS[worldRank(p.id)];
+      return `<div class="place-card locked" aria-disabled="true">
+        <span class="place-lock">${ICON_LOCK}</span>
+        <span class="place-name">${esc(p[state.ui])}</span>
+        <span class="place-en" dir="ltr" lang="en">${esc(p.en)}</span>
+        <span class="small">${t().lockedWorld} ${esc(r[state.ui])} · ${r.points} ${t().pointsShort}</span>
+      </div>`;
+    }
     const w = state.worlds[p.id];
-    const n = w.items.length + (p.id === 'dressup' ? Object.keys(w.char.slots).length : 0);
+    const n = p.coloring ? Object.keys(state.coloring).length : p.id === 'dressup' ? state.chars.length : w.items.length;
     return `<button class="place-card" data-place="${p.id}">
       <span class="place-art">${placePreview(p.id)}</span>
       <span class="place-name">${esc(p[state.ui])}</span>
@@ -108,27 +147,27 @@ function renderHome() {
       ${n ? `<span class="place-count">${n}</span>` : ''}
     </button>`;
   }).join('');
-  const future = FUTURE_PLACES.map((p) => `<div class="place-card locked" aria-disabled="true">
-      <span class="place-lock">${ICON_LOCK}</span>
-      <span class="place-name">${esc(p[state.ui])}</span>
-      <span class="place-en" dir="ltr" lang="en">${esc(p.en)}</span>
-      <span class="small">${t().soon}</span>
-    </div>`).join('');
   app.innerHTML = `${header()}
     <main class="home">
+      ${state.test ? `<p class="test-banner">${t().testMode}</p>` : ''}
       <h1 class="home-title">${t().choosePlace}</h1>
       <p class="home-sub">${t().tapToAdd}</p>
-      <div class="place-grid">${cards}${future}</div>
+      <div class="place-grid">${cards}</div>
       <p class="small center">${t().savedLocal}</p>
     </main>`;
   bindHeader();
   app.querySelectorAll('[data-place]').forEach((b) => {
-    b.onclick = () => { sfx.whoosh(); view = { place: b.dataset.place, cat: placeById(b.dataset.place).cats[0].id, sel: null }; state.lastPlace = view.place; save(); render(); };
+    b.onclick = () => { sfx.whoosh(); const p = placeById(b.dataset.place); view = { place: p.id, cat: p.cats[0]?.id, sel: null, page: null }; state.lastPlace = view.place; save(); render(); };
   });
 }
 
 function placePreview(id) {
-  const show = { bedroom: ['bed', 'lamp', 'plant'], dressup: ['shirt', 'hat', 'sneakers'], park: ['tree', 'swing', 'dog'], track: ['car', 'flag', 'cone'] }[id];
+  if (id === 'coloring') return ['lion', 'elephant', 'fish'].map((k) => `<span>${svg(COLORING[k])}</span>`).join('');
+  if (id === 'dressup') return state.chars.slice(0, 3).map((c) => `<span class="pv-char">${charSVG(c)}</span>`).join('');
+  const show = { bedroom: ['bed', 'lamp', 'plant'], park: ['tree', 'swing', 'dog'], track: ['car', 'flag', 'cone'], garden: ['sunflower', 'watering_can', 'ladybug'],
+    kitchen: ['fridge', 'stove', 'cake'], beach: ['beach_umbrella', 'sandcastle', 'crab'], street: ['house', 'stop_sign', 'street_bus'], restaurant: ['pizza', 'burger', 'juice'],
+    classroom: ['blackboard', 'globe', 'pencil'], airport: ['airplane', 'suitcase', 'control_tower'], forest: ['castle', 'mushroom', 'owl'], graffiti: ['spray_can', 'tag_wow', 'heart'],
+    moon: ['astronaut', 'planet', 'moon_rover'] }[id] || [];
   return show.map((k) => `<span>${artFor(itemById(k))}</span>`).join('');
 }
 
@@ -138,7 +177,8 @@ function renderWorld() {
   const cats = [...p.cats, { id: '_bg', he: t().background, en: t().background }];
   app.innerHTML = `${header()}
     <main class="world" dir="ltr">
-      <section class="scene-wrap">
+      <section class="scene-wrap${p.id === 'dressup' ? ' with-pager' : ''}">
+        ${p.id === 'dressup' ? studioBar() : ''}
         <div class="scene scene-${p.id}" id="scene" aria-label="${esc(p[state.ui])}"></div>
         <div class="toolbar" id="toolbar" dir="${t().dir}"></div>
       </section>
@@ -150,6 +190,7 @@ function renderWorld() {
     </main>`;
   bindHeader();
   app.querySelectorAll('[data-cat]').forEach((b) => { b.onclick = () => { sfx.tap(); view.cat = b.dataset.cat; renderWorld(); }; });
+  if (p.id === 'dressup') bindStudioBar();
   drawScene();
   drawGrid();
 }
@@ -179,8 +220,11 @@ function drawGrid() {
       </button>`);
     }
   }
-  grid.innerHTML = tiles.join('');
-  grid.querySelectorAll('.tile-item:not(.locked)').forEach((b) => { b.onclick = () => addItem(itemById(b.dataset.id), +b.dataset.v); });
+  const mine = view.cat === 'people' ? state.chars.map((c) => `<button class="tile-item mine" data-char="${c.id}" aria-label="${esc(charName(c))}">
+      <span class="tile-art">${charSVG(c)}</span><span class="lbl">${esc(charName(c))}</span></button>`).join('') : '';
+  grid.innerHTML = (mine ? `<p class="grid-head">${t().myCharacters}</p>${mine}<p class="grid-head">${esc(placeById(view.place).cats.find((c) => c.id === 'people')?.[state.ui] || '')}</p>` : '') + tiles.join('');
+  grid.querySelectorAll('[data-char]').forEach((b) => { b.onclick = () => putCharIn(view.place, b.dataset.char); });
+  grid.querySelectorAll('.tile-item[data-id]:not(.locked)').forEach((b) => { b.onclick = () => addItem(itemById(b.dataset.id), +b.dataset.v); });
   grid.querySelectorAll('.tile-item.locked').forEach((b) => { b.onclick = () => { sfx.wrong(); toast(`${t().prizeLocked} ${RANKS[prizeRank(b.dataset.id)][state.ui]}`); }; });
 }
 
@@ -207,21 +251,25 @@ function drawScene() {
     sc.appendChild(bot);
   }
   if (p.id === 'dressup') drawCharacter(sc);
-  if (!w.items.length && p.id !== 'dressup') sc.insertAdjacentHTML('beforeend', `<p class="scene-empty" dir="${t().dir}">${t().emptyScene}</p>`);
-  w.items.forEach((inst) => {
-    const it = itemById(inst.id);
-    if (!it) return;
+  const list = itemsOf(p.id);
+  if (!list.length && p.id !== 'dressup') sc.insertAdjacentHTML('beforeend', `<p class="scene-empty" dir="${t().dir}">${t().emptyScene}</p>`);
+  list.forEach((inst) => {
+    const isChar = inst.id === '_char';
+    const ch = isChar ? charById(inst.charId) : null;
+    const it = isChar ? { person: true, he: ch ? charName(ch) : '', en: 'character' } : itemById(inst.id);
+    if (!it || (isChar && !ch)) return;
     const el = document.createElement('div');
     const act = it.person && inst.action ? (ACTIONS.find((a) => a.en === inst.action) || {}).cls : '';
-    el.className = `placed${view.sel === inst.uid ? ' sel' : ''} ${act || ''}`;
+    const behind = it.acc && it.acc[inst.v || 0] === 'wings';
+    el.className = `placed${view.sel === inst.uid ? ' sel' : ''} ${act || ''}${behind ? ' behind' : ''}${isChar ? ' is-char' : ''}`;
     el.style.left = inst.x + '%';
     el.style.top = inst.y + '%';
     el.style.width = inst.w + '%';
     el.dataset.uid = inst.uid;
     el.tabIndex = 0;
     el.setAttribute('role', 'button');
-    el.setAttribute('aria-label', state.learned[it.id] ? it.en : it.he);
-    el.innerHTML = `<div class="flipper" style="transform:rotate(${inst.rot || 0}deg) scaleX(${inst.flip ? -1 : 1})">${artFor(it, inst)}</div>${inst.action === 'sleeping' ? '<span class="zz">z z</span>' : ''}`;
+    el.setAttribute('aria-label', isChar ? charName(ch) : state.learned[it.id] ? it.en : it.he);
+    el.innerHTML = `<div class="flipper" style="transform:rotate(${inst.rot || 0}deg) scaleX(${inst.flip ? -1 : 1})">${isChar ? charSVG(ch) : artFor(it, inst)}</div>${inst.action === 'sleeping' ? '<span class="zz">z z</span>' : ''}`;
     sc.appendChild(el);
     makeDraggable(el, inst, sc);
   });
@@ -275,11 +323,12 @@ function select(uid) {
 function showToolbar() {
   const tb = document.getElementById('toolbar');
   if (!tb) return;
-  const w = state.worlds[view.place];
+  const list = itemsOf(view.place);
   if (view.place === 'dressup' && typeof view.sel === 'string') return charToolbar(tb);
-  const inst = w.items.find((x) => x.uid === view.sel);
+  const inst = list.find((x) => x.uid === view.sel);
   if (!inst) { tb.classList.add('idle'); tb.innerHTML = `<span class="tb-hint">${t().noneSelected}</span>`; return; }
   tb.classList.remove('idle');
+  if (inst.id === '_char') return charInstToolbar(tb, inst, list);
   const it = itemById(inst.id);
   const learned = state.learned[it.id];
   tb.innerHTML = `
@@ -303,8 +352,8 @@ function showToolbar() {
       if (a === 'rotl') { inst.rot = ((inst.rot || 0) - 15) % 360; sfx.tap(); }
       if (a === 'rotr') { inst.rot = ((inst.rot || 0) + 15) % 360; sfx.tap(); }
       if (a === 'flip') { inst.flip = !inst.flip; sfx.tap(); }
-      if (a === 'front') { w.items.splice(w.items.indexOf(inst), 1); w.items.push(inst); sfx.tap(); }
-      if (a === 'remove') { w.items.splice(w.items.indexOf(inst), 1); view.sel = null; sfx.whoosh(); }
+      if (a === 'front') { list.splice(list.indexOf(inst), 1); list.push(inst); sfx.tap(); }
+      if (a === 'remove') { list.splice(list.indexOf(inst), 1); view.sel = null; sfx.whoosh(); }
       if (a === 'color') return openPalette(b, (c) => changeColor(inst, it, c));
       if (a === 'action') return openList(b, ACTIONS, (x) => changeAction(inst, it, x));
       if (a === 'skin') return openSkins(b, (s) => { inst.skin = s; save(); drawScene(); });
@@ -316,7 +365,7 @@ function showToolbar() {
 
 // ---------- dress-up character ----------
 function drawCharacter(sc) {
-  const ch = state.worlds.dressup.char;
+  const ch = curChar();
   const base = characterBase(ch.skin, ch.feeling);
   const layer = (slot) => {
     const s = ch.slots[slot];
@@ -339,7 +388,7 @@ function drawCharacter(sc) {
 }
 
 function charToolbar(tb) {
-  const ch = state.worlds.dressup.char;
+  const ch = curChar();
   tb.classList.remove('idle');
   const slotSel = view.sel.startsWith('slot:') ? view.sel.slice(5) : null;
   const worn = Object.entries(ch.slots).map(([slot, s]) => {
@@ -371,6 +420,165 @@ function charToolbar(tb) {
   }
 }
 
+// ---------- character studio: pages 1, 2, 3 … ----------
+function studioBar() {
+  return `<div class="studio-bar" dir="${t().dir}">
+    <span class="sb-label">${t().character}:</span>
+    ${state.chars.map((c, i) => `<button class="sb-page${i === state.charIdx ? ' on' : ''}" data-ci="${i}" aria-label="${esc(charName(c))}">${c.n}</button>`).join('')}
+    <button class="sb-page add" data-new aria-label="${t().newCharacter}">${ICON_PLUS}</button>
+    <span class="sb-gap"></span>
+    <button class="btn primary sb-put" data-put>${ICON_PLACES}<span>${t().putInRoom}</span></button>
+    ${state.chars.length > 1 ? `<button class="tb danger" data-del aria-label="${t().deleteCharacter}" title="${t().deleteCharacter}">${ICON_TRASH}</button>` : ''}
+  </div>`;
+}
+function bindStudioBar() {
+  app.querySelectorAll('[data-ci]').forEach((b) => { b.onclick = () => { sfx.tap(); state.charIdx = +b.dataset.ci; view.sel = null; save(); renderWorld(); }; });
+  app.querySelector('[data-new]').onclick = () => {
+    sfx.pop();
+    const n = Math.max(...state.chars.map((c) => c.n)) + 1;
+    state.chars.push(newChar(n));
+    state.charIdx = state.chars.length - 1;
+    view.sel = 'char';
+    save(); renderWorld();
+  };
+  app.querySelector('[data-put]').onclick = (e) => {
+    const worlds = sceneWorlds();
+    popover(e.currentTarget, `<p class="pop-title">${t().putInRoom}</p><div class="pop-list">${worlds.map((p) => `<button class="pop-item" data-w="${p.id}">${esc(p[state.ui])}</button>`).join('')}</div>`, (pop, close) => {
+      pop.querySelectorAll('[data-w]').forEach((b) => { b.onclick = () => { close(); putCharIn(b.dataset.w, curChar().id); toast(t().addedTo + placeById(b.dataset.w)[state.ui]); }; });
+    });
+  };
+  const del = app.querySelector('[data-del]');
+  if (del) del.onclick = async () => {
+    if (!(await confirmBox(t().deleteCharConfirm))) return;
+    const ch = curChar();
+    state.chars.splice(state.charIdx, 1);
+    for (const w of Object.values(state.worlds)) w.items = w.items.filter((x) => x.charId !== ch.id);
+    state.charIdx = Math.max(0, state.charIdx - 1);
+    view.sel = null; save(); renderWorld();
+  };
+}
+
+// The same character can stand in many rooms; changes in the studio show everywhere.
+function putCharIn(placeId, charId) {
+  const p = placeById(placeId);
+  const inst = { uid: nextUid(), id: '_char', charId, x: 20 + Math.random() * 60, y: p.split + (100 - p.split) * 0.2, w: 9, rot: 0 };
+  state.worlds[placeId].items.push(inst);
+  sfx.pop();
+  save();
+  if (view.place === placeId) { view.sel = inst.uid; drawScene(); }
+}
+
+function charInstToolbar(tb, inst, list) {
+  const ch = charById(inst.charId);
+  tb.innerHTML = `
+    <span class="tb-name">${esc(charName(ch))}</span>
+    <button class="tb" data-tb="action">${ICON_RUN}<span>${t().action}</span></button>
+    <button class="tb" data-tb="studio">${ICON_PAINT}<span>${t().editInStudio}</span></button>
+    <button class="tb" data-tb="bigger" aria-label="${t().bigger}" title="${t().bigger}">${ICON_PLUS}</button>
+    <button class="tb" data-tb="smaller" aria-label="${t().smaller}" title="${t().smaller}">${ICON_MINUS}</button>
+    <button class="tb" data-tb="rotl" aria-label="${t().rotL}" title="${t().rotL}">${ICON_ROTL}</button>
+    <button class="tb" data-tb="rotr" aria-label="${t().rotR}" title="${t().rotR}">${ICON_ROTR}</button>
+    <button class="tb" data-tb="flip" aria-label="${t().flip}" title="${t().flip}">${ICON_FLIP}</button>
+    <button class="tb" data-tb="front" aria-label="${t().front}" title="${t().front}">${ICON_FRONT}</button>
+    <button class="tb danger" data-tb="remove" aria-label="${t().remove}" title="${t().remove}">${ICON_TRASH}</button>`;
+  tb.querySelectorAll('[data-tb]').forEach((b) => {
+    b.onclick = () => {
+      const a = b.dataset.tb;
+      if (a === 'action') return openList(b, ACTIONS, (x) => changeAction(inst, { he: charName(ch), en: 'character' }, x));
+      if (a === 'studio') { state.charIdx = state.chars.indexOf(ch); view = { place: 'dressup', cat: placeById('dressup').cats[0].id, sel: 'char' }; save(); return render(); }
+      if (a === 'bigger') inst.w = Math.min(60, inst.w * 1.15);
+      if (a === 'smaller') inst.w = Math.max(3, inst.w / 1.15);
+      if (a === 'rotl') inst.rot = ((inst.rot || 0) - 15) % 360;
+      if (a === 'rotr') inst.rot = ((inst.rot || 0) + 15) % 360;
+      if (a === 'flip') inst.flip = !inst.flip;
+      if (a === 'front') { list.splice(list.indexOf(inst), 1); list.push(inst); }
+      if (a === 'remove') { list.splice(list.indexOf(inst), 1); view.sel = null; sfx.whoosh(); }
+      sfx.tap(); save(); drawScene();
+    };
+  });
+}
+
+// ---------- coloring world for little kids ----------
+const KID_PAGES = [
+  ['lion', 'אריה'], ['elephant', 'פיל'], ['hippo', 'היפופוטם'], ['cat', 'חתול'], ['dog', 'כלב'], ['fish', 'דג'],
+  ['bird', 'ציפור'], ['butterfly', 'פרפר'], ['frog', 'צפרדע'], ['pig', 'חזיר'], ['cow', 'פרה'], ['bear', 'דוב'],
+];
+const KID_COLORS = COLORS.filter((c) => !c.shade && !['turquoise', 'white'].includes(c.en));
+let brush = null;
+
+function pageSVG(id) {
+  const fills = state.coloring[id] || {};
+  let h = COLORING[id];
+  return h.replace(/data-area="(\d+)"([^>]*?)fill="#FFFFFF"/g, (m, n, mid) => `data-area="${n}"${mid}fill="${fills[n] || '#FFFFFF'}"`);
+}
+
+function renderColoring() {
+  const page = view.page;
+  if (!page) {
+    app.innerHTML = `${header()}
+      <main class="home kid-home">
+        <h1 class="home-title">${t().kidWhat}</h1>
+        <div class="kid-grid">${KID_PAGES.map(([id, he]) => `<button class="kid-card" data-page="${id}" aria-label="${esc(he)}">${svg(pageSVG(id))}
+          <span>${state.kidWords[id] ? `<b dir="ltr" lang="en">${id}</b>` : esc(he)}</span></button>`).join('')}</div>
+      </main>`;
+    bindHeader();
+    app.querySelectorAll('[data-page]').forEach((b) => { b.onclick = () => openPage(b.dataset.page); });
+    return;
+  }
+  const he = KID_PAGES.find((x) => x[0] === page)[1];
+  app.innerHTML = `${header()}
+    <main class="kid-page" dir="ltr">
+      <section class="kid-canvas-wrap">
+        <div class="kid-canvas" id="kidCanvas" role="img" aria-label="${esc(he)}">${svg(pageSVG(page))}</div>
+      </section>
+      <aside class="panel kid-panel" dir="${t().dir}">
+        <button class="btn" data-back>${t().kidBack}</button>
+        <h2 class="panel-title">${esc(he)} <button class="chip-hear" data-hear aria-label="${t().hear}">${ICON.speaker}</button></h2>
+        <p class="small">${t().kidPickColor}</p>
+        <div class="kid-colors">${KID_COLORS.map((c) => `<button class="kid-sw${brush === c.hex ? ' on' : ''}" style="background:${c.hex}" data-c="${c.en}" aria-label="${esc(c.he)}">
+          ${state.kidWords['c:' + c.en] ? `<span dir="ltr" lang="en">${c.en}</span>` : ''}</button>`).join('')}</div>
+      </aside>
+    </main>`;
+  bindHeader();
+  app.querySelector('[data-back]').onclick = () => { view.page = null; render(); };
+  app.querySelector('[data-hear]').onclick = () => say(page);
+  app.querySelectorAll('[data-c]').forEach((b) => {
+    b.onclick = async () => {
+      const c = KID_COLORS.find((x) => x.en === b.dataset.c);
+      const ok = await runKidSay({ word: c.en, prompt: t().kidSayColor, artHTML: `<div class="kid-swatch" style="background:${c.hex}"></div>` });
+      if (!ok) return;
+      if (!state.kidWords['c:' + c.en]) { state.kidWords['c:' + c.en] = 1; addPoints(5, { countSuccess: false }); }
+      brush = c.hex;
+      sfx.paint(); save(); render();
+    };
+  });
+  const canvas = document.getElementById('kidCanvas');
+  canvas.onclick = (e) => {
+    const area = e.target.closest('[data-area]');
+    if (!area) return;
+    if (!brush) { sfx.wrong(); toast(t().kidPickColor); return; }
+    const n = area.dataset.area;
+    (state.coloring[page] = state.coloring[page] || {})[n] = brush;
+    canvas.querySelectorAll(`[data-area="${n}"]`).forEach((x) => x.setAttribute('fill', brush));
+    sfx.paint(); save();
+  };
+}
+
+async function openPage(id) {
+  sfx.tap();
+  if (!state.kidWords[id]) {
+    const he = KID_PAGES.find((x) => x[0] === id)[1];
+    const ok = await runKidSay({ word: id, prompt: t().kidSayAnimal, artHTML: svg(COLORING[id]) });
+    if (!ok) return;
+    state.kidWords[id] = 1;
+    addPoints(5, { countSuccess: false });
+    save();
+    toast(`${he} = ${id}`);
+  }
+  view.page = id;
+  render();
+}
+
 // ---------- adding items (word task) ----------
 async function addItem(item, v) {
   sfx.tap();
@@ -395,16 +603,17 @@ function accInst(item, v, uid) {
 
 function placeItem(item, v) {
   const p = placeById(view.place);
-  const w = state.worlds[view.place];
+  const list = itemsOf(view.place);
   if (item.dress) {
+    const ch = curChar();
     const slot = DRESS_ART[item.dress[v]].slot;
-    w.char.slots[slot] = { id: item.id, v, color: item.color };
-    if (slot === 'dress') { delete w.char.slots.top; delete w.char.slots.bottom; }
-    if ((slot === 'top' || slot === 'bottom') && w.char.slots.dress) delete w.char.slots.dress;
+    ch.slots[slot] = { id: item.id, v, color: item.color };
+    if (slot === 'dress') { delete ch.slots.top; delete ch.slots.bottom; }
+    if ((slot === 'top' || slot === 'bottom') && ch.slots.dress) delete ch.slots.dress;
     view.sel = 'slot:' + slot;
   } else if (item.acc) {
     const inst = accInst(item, v, nextUid());
-    w.items.push(inst);
+    list.push(inst);
     view.sel = inst.uid;
   } else {
     const y = SKY.includes(item.id) ? 12 + Math.random() * 20
@@ -412,7 +621,7 @@ function placeItem(item, v) {
       : p.split + (100 - p.split) * (0.3 + Math.random() * 0.35);
     const inst = { uid: nextUid(), id: item.id, v, x: 20 + Math.random() * 60, y, w: item.w || 14, color: item.color, rot: 0 };
     if (item.person) { inst.skin = rand(SKINS); inst.hair = rand(HAIR_COLORS); }
-    w.items.push(inst);
+    list.push(inst);
     view.sel = inst.uid;
   }
   save();
@@ -447,8 +656,9 @@ function colorWords(color) {
 
 async function changeColor(inst, it, color) {
   const subject = it.person ? 'shirt' : it.en;
+  const subjectHe = it.person ? 'חולצה' : it.he;
   const cw = colorWords(color);
-  const r = await runSentenceTask({ kind: 'color', artSvg: artFor(it, { ...inst, color: color.hex }), subject, value: cw.value, accept: cw.accept, valueHe: color.he, swatch: color.hex, level: state.levels.sentences });
+  const r = await runSentenceTask({ kind: 'color', artSvg: artFor(it, { ...inst, color: color.hex }), subject, subjectHe, value: cw.value, accept: cw.accept, valueHe: color.he, swatch: color.hex, level: state.levels.sentences });
   if (!r.ok) return;
   inst.color = color.hex;
   sfx.paint();
@@ -461,7 +671,7 @@ async function changeSurface(surfId, color) {
   const w = state.worlds[p.id];
   const box = `<div class="surf-preview" style="background:${esc(texBG(w.tex[surfId], color.hex))}"></div>`;
   const cw = colorWords(color);
-  const r = await runSentenceTask({ kind: 'surface', artSvg: box, subject: s.en, value: cw.value, accept: cw.accept, valueHe: `${s.he} · ${color.he}`, swatch: color.hex, level: state.levels.sentences });
+  const r = await runSentenceTask({ kind: 'surface', artSvg: box, subject: s.en, subjectHe: s.he, value: cw.value, accept: cw.accept, valueHe: color.he, swatch: color.hex, level: state.levels.sentences });
   if (!r.ok) return;
   w.bg[surfId] = color.hex;
   learnWord('_' + surfId);
@@ -470,14 +680,16 @@ async function changeSurface(surfId, color) {
 }
 
 async function changeAction(inst, it, action) {
-  const r = await runSentenceTask({ kind: 'action', artSvg: artFor(it, inst), subject: it.en, value: action.en, valueHe: action.he, level: state.levels.sentences });
+  const isChar = inst.id === '_char';
+  const art = isChar ? charSVG(charById(inst.charId)) : artFor(it, inst);
+  const r = await runSentenceTask({ kind: 'action', artSvg: art, subject: isChar ? 'character' : it.en, subjectHe: isChar ? 'הדמות' : it.he, value: action.en, valueHe: action.he, level: state.levels.sentences });
   if (!r.ok) return;
   inst.action = action.en === 'standing' ? null : action.en;
   sentenceDone(r);
 }
 
 async function changeFeeling(f) {
-  const ch = state.worlds.dressup.char;
+  const ch = curChar();
   const face = characterBase(ch.skin, f.en).head;
   const r = await runSentenceTask({ kind: 'feeling', artSvg: svg(face, '64 22 72 76'), subject: 'I', value: f.en, valueHe: f.he, level: state.levels.sentences });
   if (!r.ok) return;
@@ -496,6 +708,12 @@ function sentenceDone(r) {
 
 // ---------- rewards ----------
 function afterSuccess(res) {
+  const ri = rankIndex();
+  for (let k = (state.rankSeen || 0) + 1; k <= ri; k++) {
+    const wId = RANKS[k].world;
+    if (wId) { confetti(); sfx.sparkle(); toast(`${t().worldOpened} ${placeById(wId)[state.ui]}`); state.newPrize = true; }
+  }
+  state.rankSeen = Math.max(state.rankSeen || 0, ri);
   if (res.surprise) { confetti(); sfx.sparkle(); toast(t().surprise); }
   if (res.prize) { confetti(); sfx.sparkle(); toast(t().newPrize); }
   save();
@@ -588,25 +806,55 @@ function sheet(title, html, bind) {
   if (bind) bind(ov, close);
 }
 
+function stickerSVG(r, i) {
+  const glyph = {
+    seed: '<path d="M50 70 Q50 50 40 40 Q56 38 54 56 Q60 42 70 42 Q66 58 52 60" fill="#FFFFFF"/>',
+    magnifier: '<circle cx="46" cy="46" r="13" fill="none" stroke="#FFFFFF" stroke-width="6"/><path d="M56 56 L68 68" stroke="#FFFFFF" stroke-width="7" stroke-linecap="round"/>',
+    brush: '<path d="M64 30 L70 36 L48 58 L42 52 Z" fill="#FFFFFF"/><path d="M42 54 Q30 56 32 70 Q44 70 46 58 Z" fill="#FFFFFF"/>',
+    star: '<path d="M50 28 L56 44 L72 44 L59 54 L64 70 L50 60 L36 70 L41 54 L28 44 L44 44 Z" fill="#FFFFFF"/>',
+    wave: '<path d="M28 56 Q36 44 44 56 T60 56 T76 56" stroke="#FFFFFF" stroke-width="6" fill="none" stroke-linecap="round"/>',
+    house: '<path d="M32 50 L50 34 L68 50 L68 68 L32 68 Z" fill="#FFFFFF"/>',
+    heart: '<path d="M50 70 Q30 56 32 44 Q34 34 42 34 Q48 34 50 42 Q52 34 58 34 Q66 34 68 44 Q70 56 50 70 Z" fill="#FFFFFF"/>',
+    book: '<path d="M30 36 L48 40 L48 68 L30 64 Z M70 36 L52 40 L52 68 L70 64 Z" fill="#FFFFFF"/>',
+    plane: '<path d="M28 54 L72 46 L70 52 L54 56 L46 70 L42 70 L44 58 L30 60 Z" fill="#FFFFFF"/>',
+    wand: '<path d="M34 68 L58 44" stroke="#FFFFFF" stroke-width="5" stroke-linecap="round"/><path d="M62 30 L65 38 L73 38 L67 43 L69 51 L62 46 L55 51 L57 43 L51 38 L59 38 Z" fill="#FFFFFF"/>',
+    spray: '<rect x="42" y="40" width="16" height="30" rx="3" fill="#FFFFFF"/><rect x="46" y="32" width="8" height="8" fill="#FFFFFF"/><circle cx="64" cy="32" r="2.4" fill="#FFFFFF"/><circle cx="68" cy="38" r="2" fill="#FFFFFF"/>',
+    rocket: '<path d="M50 28 Q62 40 60 60 L40 60 Q38 40 50 28 Z M40 52 L32 64 L40 62 Z M60 52 L68 64 L60 62 Z" fill="#FFFFFF"/>',
+    trophy: '<path d="M38 34 L62 34 L60 50 Q56 58 50 58 Q44 58 40 50 Z M46 58 L54 58 L54 64 L46 64 Z M40 66 L60 66 L60 70 L40 70 Z" fill="#FFFFFF"/>',
+    crown: '<path d="M32 64 L30 38 L42 50 L50 34 L58 50 L70 38 L68 64 Z" fill="#FFFFFF"/>',
+  }[r.icon] || '';
+  return `<svg viewBox="0 0 100 100" aria-hidden="true"><circle cx="50" cy="50" r="44" fill="${r.color}"/><circle cx="50" cy="50" r="44" fill="none" stroke="#FFFFFF" stroke-width="5"/><circle cx="50" cy="50" r="36" fill="none" stroke="#FFFFFF" stroke-width="1.5" stroke-dasharray="3 3" opacity=".7"/>${glyph}<text x="50" y="90" text-anchor="middle" font-family="Fredoka, sans-serif" font-weight="700" font-size="12" fill="${r.color}">${i + 1}</text></svg>`;
+}
+
 function openProgress() {
   const i = rankIndex();
   const cur = RANKS[i], next = RANKS[i + 1];
   const pct = next ? Math.round(((state.points - cur.points) / (next.points - cur.points)) * 100) : 100;
-  const prizes = RANKS.filter((r) => r.prize).map((r) => {
-    const it = itemById(r.prize);
-    const got = state.unlocked.includes(r.prize);
-    return `<div class="prize${got ? ' got' : ''}"><span class="tile-art">${artFor(it)}</span>
-      <span>${got ? `<b dir="ltr" lang="en">${esc(it.en)}</b>` : `${ICON_LOCK} ${esc(r[state.ui])}`}</span></div>`;
+  const rows = RANKS.map((r, k) => {
+    const got = k <= i;
+    const item = r.prize ? itemById(r.prize) : null;
+    const world = r.world ? placeById(r.world) : null;
+    return `<div class="rank-row${got ? ' got' : ''}${k === i ? ' now' : ''}">
+      <div class="rr-sticker">${stickerSVG(r, k)}</div>
+      <div class="rr-info"><b>${esc(r[state.ui])}</b><span class="small">${r.points} ${t().pointsShort}</span>
+        ${got ? `<span class="rr-got">${t().youGot}:</span>` : `<span class="rr-lock">${ICON_LOCK}</span>`}</div>
+      <div class="rr-prizes">
+        <div class="rr-prize"><span class="rr-art">${stickerSVG(r, k)}</span><span>${t().sticker}</span></div>
+        ${item ? `<div class="rr-prize"><span class="rr-art">${artFor(item)}</span><span dir="ltr" lang="en">${got ? esc(item.en) : '?'}</span></div>` : ''}
+        ${world ? `<div class="rr-prize world"><span class="rr-art">${placePreview(world.id).split('</span>')[0]}</span></span><span>${t().newWorld}: ${esc(world[state.ui])}</span></div>` : ''}
+      </div>
+    </div>`;
   }).join('');
   sheet(t().progress, `
     <div class="rank-card"><span class="rank-label">${t().rank}</span><span class="rank-name">${esc(cur[state.ui])}</span>
       <span class="rank-pts">${state.points} ${t().points}</span></div>
     <div class="bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${pct}"><span style="width:${pct}%"></span></div>
     <p class="small">${next ? `${next.points - state.points} ${t().points} ${t().nextRank}: ${esc(next[state.ui])}` : ''}</p>
-    <h3>${t().prizes}</h3><div class="prizes">${prizes}</div>`);
+    <h3>${t().prizes}</h3><div class="rank-rows">${rows}</div>`);
   state.newPrize = false;
   save();
   document.querySelector('[data-act="progress"]')?.classList.remove('glow');
+  setTimeout(() => document.querySelector('.rank-row.now')?.scrollIntoView({ block: 'center' }), 250);
 }
 
 function openDictionary() {
@@ -621,8 +869,9 @@ function openDictionary() {
 }
 
 function openSettings() {
-  const lv = Object.keys(state.levels).map((k) => `<div class="set-row"><span>${esc(t().topics[k])}</span>
-    <div class="seg" role="radiogroup" aria-label="${esc(t().topics[k])}">${[1, 2, 3].map((n) => `<button role="radio" aria-checked="${state.levels[k] === n}" class="${state.levels[k] === n ? 'on' : ''}" data-lv="${k}" data-n="${n}">${n}</button>`).join('')}</div></div>`).join('');
+  const label = (k) => (k === 'sentences' ? t().topics.sentences : placeById(k)?.[state.ui] || k);
+  const lv = Object.keys(state.levels).filter((k) => k === 'sentences' || (placeById(k) && isOpen(placeById(k)))).map((k) => `<div class="set-row"><span>${esc(label(k))}</span>
+    <div class="seg" role="radiogroup" aria-label="${esc(label(k))}">${[1, 2, 3].map((n) => `<button role="radio" aria-checked="${state.levels[k] === n}" class="${state.levels[k] === n ? 'on' : ''}" data-lv="${k}" data-n="${n}">${n}</button>`).join('')}</div></div>`).join('');
   sheet(t().settings, `
     <h3>${t().level}</h3><p class="small">${t().levelNote}</p>${lv}
     <h3>${t().language}</h3>
@@ -630,7 +879,10 @@ function openSettings() {
     <h3>${t().sound}</h3>
     <div class="seg wide"><button class="${state.sound ? 'on' : ''}" data-snd="1">${t().on}</button><button class="${!state.sound ? 'on' : ''}" data-snd="0">${t().off}</button></div>
     <p class="small">${t().savedLocal}</p>
+    ${state.test ? `<p class="test-banner">${t().testMode}</p><button class="btn" data-testoff>${t().testOff}</button>` : ''}
     <button class="btn danger" data-reset>${t().reset}</button>`, (ov, close) => {
+    const off = ov.querySelector('[data-testoff]');
+    if (off) off.onclick = () => { state.test = false; save(); close(); view = { place: null }; render(); };
     ov.querySelectorAll('[data-lv]').forEach((b) => { b.onclick = () => { state.levels[b.dataset.lv] = +b.dataset.n; state.placement.active = false; save(); close(); openSettings(); }; });
     ov.querySelectorAll('[data-ui]').forEach((b) => { b.onclick = () => { state.ui = b.dataset.ui; state.englishAsked = true; save(); close(); render(); openSettings(); }; });
     ov.querySelectorAll('[data-snd]').forEach((b) => { b.onclick = () => { state.sound = b.dataset.snd === '1'; setSound(state.sound); save(); close(); openSettings(); }; });
@@ -687,7 +939,8 @@ const ICON_TRASH = I(`<path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v
 function demo(place) {
   setDemo(true);
   const s = JSON.parse(JSON.stringify(state));
-  s.worlds[place].items = [];
+  s.test = true;
+  if (s.worlds[place]) s.worlds[place].items = [];
   const add = (id, x, y, w, extra = {}) => s.worlds[place].items.push({ uid: s.uid++, id, v: 0, x, y, w: w || itemById(id).w, color: itemById(id).color, rot: 0, ...extra });
   const learn = (list) => list.forEach((k) => { s.learned[k] = { n: 1 }; });
   if (place === 'bedroom') {
@@ -714,22 +967,26 @@ function demo(place) {
   }
   if (place === 'dressup') {
     s.worlds.dressup.tex = { wall: 'dots' };
-    s.worlds.dressup.char = { skin: '#B9805A', feeling: 'happy', slots: {
+    s.chars = [newChar(1)]; s.charIdx = 0;
+    Object.assign(s.chars[0], { skin: '#B9805A', feeling: 'happy', slots: {
       hair: { id: 'hair', v: 9, color: '#2B1B10' }, top: { id: 'hoodie', v: 0, color: '#2EC4B6' }, bottom: { id: 'jeans', v: 0, color: '#3E5C8A' },
-      feet: { id: 'sneakers', v: 0, color: '#F7F6F2' } } };
+      feet: { id: 'sneakers', v: 0, color: '#F7F6F2' } } });
     learn(['hair', 'hoodie', 'jeans', 'sneakers']);
   }
   if (place === 'dressup') {
-    s.worlds.dressup.items.push(accInst(itemById('sunglasses'), 0, s.uid++), accInst(itemById('bag'), 1, s.uid++));
+    s.chars[0].acc.push(accInst(itemById('sunglasses'), 0, s.uid++), accInst(itemById('bag'), 1, s.uid++));
     learn(['sunglasses', 'bag']);
   }
   replaceState(s);
-  view = { place, cat: placeById(place).cats[0].id, sel: null };
+  view = { place, cat: placeById(place).cats[0]?.id, sel: null };
 }
 
 // ---------- start ----------
 const params = new URLSearchParams(location.search);
 if (params.get('lang') === 'en' || params.get('lang') === 'he') { state.ui = params.get('lang'); save(); }
+// Test mode for the team: play.html?test=wordcraft-team opens all worlds and prizes (saved in this browser).
+if (params.get('test') === 'wordcraft-team') { state.test = true; save(); }
+if (params.get('test') === 'off') { state.test = false; save(); }
 if (params.get('demo') && placeById(params.get('demo'))) {
   demo(params.get('demo'));
 }

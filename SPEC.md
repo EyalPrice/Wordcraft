@@ -1,6 +1,6 @@
 # Wordcraft – Product Specification
 
-*Version 0.3 – feedback round 1 applied (realistic teen style, dress-up rebuild, layout fixes). Stored in the GitHub repo (EyalPrice/Wordcraft) as SPEC.md and updated with each release.*
+*Version 0.4 – feedback round 2 applied (character studio, all 15 worlds built, prize wall, many more items). Stored in the GitHub repo (EyalPrice/Wordcraft) as SPEC.md and updated with each release.*
 
 ## 1. Overview
 
@@ -72,9 +72,11 @@ Wordcraft (Hebrew subtitle: "יוצרים עם מילים באנגלית") is a 
   2. Dress-up character (clothing vocabulary)
   3. Park
   4. Race track
-- All future places are shown on the place screen with a lock. When a place is ready, its lock is removed.
+- 15 worlds are built. 4 are open from the start: bedroom, character studio, park, race track.
+- The other 11 open one by one as the player earns points (see Rewards): coloring world for little kids, garden, kitchen, beach, street, restaurant, classroom, airport, magic forest, graffiti wall, the moon. Locked worlds show a lock and the rank that opens them.
+- Test mode for the team: open `play.html?test=wordcraft-team` once and every world and prize is open in that browser. `play.html?test=off` (or the button in Settings) turns it off.
 - Each starting place focuses on a different word area.
-- Locked places (shown now): coloring world for little kids, kitchen, graffiti wall, magic forest, the moon, restaurant, street, classroom, beach, airport, garden.
+- Each world has its own surfaces, categories and items (about 250 items in all), and its own people (e.g. waiter, astronaut, pilot, lifeguard, gardener, wizard).
 - Multiple places are saved.
 
 ## 9. Items and customization
@@ -89,7 +91,7 @@ Wordcraft (Hebrew subtitle: "יוצרים עם מילים באנגלית") is a 
 - Every item's color can be changed, always with an English sentence.
 - The color palette has many shades: 12 base colors, each with a light and a dark shade.
 - Color words follow the level: at levels 1–2 the basic color is enough ("The table is blue" for light blue); at level 3 the shade is required ("The table is light blue").
-- While writing a color sentence, a speaker button plays the color word (e.g. "turquoise").
+- Every sentence task shows two chips, each with a speaker button: the thing (e.g. "wall", "floor", "lamp") and the new value (e.g. "yellow"), so the player can hear both English words.
 - Items are chosen by Claude: as many items and variants as possible in every place.
 
 ## 10. People and characters
@@ -97,7 +99,11 @@ Wordcraft (Hebrew subtitle: "יוצרים עם מילים באנגלית") is a 
 - Adding a person teaches what they are (e.g. "policeman").
 - Mainly, players give people actions with sentences (e.g. "The girl is sitting on the chair").
 - A little light conversation with characters.
-- Dress-up character: one connected, realistic body (not separate parts), with teen proportions. Free choice of skin tone, feeling, 12 hairstyles and many clothes, with no gender labels.
+- Character studio (was "dress-up"): pages 1, 2, 3… with a + button; each page holds one character the player designs. A character can be deleted (it then leaves every room too).
+- "Put in a room" places the character in any open world. My characters also appear at the top of the People category in every room.
+- It is the same character everywhere: a change in the studio shows in every room it stands in, and one character can stand in many rooms at once.
+- In a room, a character can get actions with a sentence ("The character is dancing"), be resized, rotated, flipped, removed, or opened in the studio for editing.
+- Character design: one connected, realistic body (not separate parts), with teen proportions. Free choice of skin tone, feeling, 12 hairstyles and many clothes, with no gender labels.
 - Clothes (hair, tops, coats and dresses, pants and skirts, shoes, scarf) are worn on the body. The worn item shows its English word and a speaker button, like items in the rooms.
 - Accessories (hats, cap, glasses, sunglasses, earrings, necklace, watch, bow, bags, headphones, crown) are free: move, resize, rotate and flip them.
 - The character always wears a plain base layer, so it is never shown without clothes.
@@ -107,8 +113,9 @@ Wordcraft (Hebrew subtitle: "יוצרים עם מילים באנגלית") is a 
 
 - The main reward is the item itself.
 - Occasional surprises every few questions.
-- Ranks: a progress bar fills with points toward each rank, and each rank gives a prize.
-- Rank prizes are the locked rare items (e.g. a pet, a fountain) and new places.
+- 15 ranks. A progress bar fills with points toward the next rank.
+- Every rank gives a sticker. Most ranks also give a special item (parrot, crown, fountain, wings, unicorn, rocket, dragon, UFO) and/or open a new world.
+- The prize wall (in the Progress window) shows every rank as a big row: the sticker, the rank name and points, and next to it what you got (or a lock and "?" if not yet). The current rank is highlighted.
 - Progress and prizes live in a separate window, not on the main screen. A button with a glowing indicator shows when something is waiting.
 
 ## 12. Learning extras
@@ -164,16 +171,25 @@ Wordcraft (Hebrew subtitle: "יוצרים עם מילים באנגלית") is a 
 | 2026-11-25 | Textures for all surfaces; palette with shades; shade words only at level 3 |
 | 2026-11-25 | Dress-up rebuilt: connected body, 12 hairstyles, free accessories |
 | 2026-11-25 | Tap selects only; speaker button to hear words; hear buttons in unscramble and color sentences; last hint = hear the answer |
+| 2026-11-25 | Feedback round 2: character studio with pages; same character in many rooms, updates everywhere |
+| 2026-11-25 | All 11 extra worlds built; locked by points for players; test mode address for the team |
+| 2026-11-25 | Prize wall with big stickers and prizes per rank; 15 ranks |
+| 2026-11-25 | Sentence tasks: hear buttons for both the thing and the value |
+
+### Coloring world for little kids (built in 0.4)
+
+- 12 outline pictures of animals (lion, elephant, hippo, cat, dog, fish, bird, butterfly, frog, pig, cow, bear) in the first, cute style.
+- The child picks a picture. The first time, they hear the English word and say it (speech recognition; an "I said it!" button when the browser can't listen, or after two tries).
+- To pick a color, the child hears and says the color word. Then they color the picture by hand, area by area. To change color, they pick and say another color.
+- Words the child said are shown on the picture and color buttons. Colored pictures are saved.
 
 ## 18. Planned next (approved, not built yet)
 
-- Coloring world for little kids (kindergarten–1st grade): hear a question in Hebrew, say the English word (e.g. lion), then say a color word to pick a color; the child colors by hand; a "hear it" button for every animal and color; single basic words only.
 - Smart repetition of hard words.
 - Photo mode to share a saved world.
 - Daily challenge with a special item.
 - "My Words" collection with pictures and a hear button.
 - A short parent screen showing the words little kids learned.
-- More items and variants in every place.
 
 ## 19. Open questions
 

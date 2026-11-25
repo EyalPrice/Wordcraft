@@ -274,11 +274,14 @@ export function runSentenceTask(o) {
     ui.prompt(t()[promptKey]);
     ui.onClose(() => { if (!finished) { finished = true; ui.close(); resolve({ ok: false }); } });
 
+    // Two chips: the thing (e.g. wall) and the new value (e.g. yellow), each with a hear button.
     const chip = document.createElement('div');
-    chip.className = 'value-chip';
-    chip.innerHTML = `${o.swatch ? `<span class="sw" style="background:${o.swatch}"></span>` : ''}<span>${esc(o.valueHe)}</span>
-      <button class="chip-hear" aria-label="${t().hear}">${ICON.speaker}</button>`;
-    chip.querySelector('.chip-hear').onclick = () => say(o.value, 0.8);
+    chip.className = 'chips-row';
+    chip.innerHTML = `${o.kind !== 'feeling' && o.subjectHe ? `<span class="value-chip"><span>${esc(o.subjectHe)}</span>
+        <button class="chip-hear" data-say="subject" aria-label="${t().hear}: ${esc(o.subjectHe)}">${ICON.speaker}</button></span>` : ''}
+      <span class="value-chip">${o.swatch ? `<span class="sw" style="background:${o.swatch}"></span>` : ''}<span>${esc(o.valueHe)}</span>
+        <button class="chip-hear" data-say="value" aria-label="${t().hear}: ${esc(o.valueHe)}">${ICON.speaker}</button></span>`;
+    chip.querySelectorAll('.chip-hear').forEach((b) => { b.onclick = () => say(b.dataset.say === 'subject' ? o.subject : o.value, 0.8); });
 
     const blank = (w) => w.replace(/[a-z]/gi, '_');
     const firstL = (w) => w[0] + w.slice(1).replace(/[a-z]/gi, '_');
@@ -365,6 +368,42 @@ export function runSentenceTask(o) {
       });
     }
     renderType();
+  });
+}
+
+// ---------- little kids: hear the word and say it ----------
+// Resolves true when the child said the word (or tapped "I said it" when the browser can't listen).
+export function runKidSay({ word, artHTML, prompt }) {
+  return new Promise((resolve) => {
+    const ui = openShell({ artSvg: artHTML });
+    ui.box.classList.add('kid');
+    ui.prompt(prompt);
+    let done = false, tries = 0;
+    const finish = (ok) => { if (done) return; done = true; if (ok) { sfx.success(); ui.feedback(rand(t().great), 'good'); ui.box.classList.add('win'); } setTimeout(() => { ui.close(); resolve(ok); }, ok ? 700 : 0); };
+    ui.onClose(() => finish(false));
+    const row = document.createElement('div');
+    row.className = 'kid-row';
+    row.innerHTML = `<button class="btn kid-btn hear">${ICON.speaker}<span>${t().hear}</span></button>
+      ${canListen ? `<button class="btn kid-btn mic primary">${ICON.mic}<span>${t().speak}</span></button>` : ''}
+      <button class="btn kid-btn said${canListen ? ' later' : ' primary'}">${t().iSaidIt}</button>`;
+    ui.body.appendChild(row);
+    row.querySelector('.hear').onclick = () => say(word, 0.75);
+    row.querySelector('.said').onclick = () => finish(true);
+    const mic = row.querySelector('.mic');
+    if (mic) mic.onclick = async () => {
+      mic.classList.add('rec');
+      const alts = await listen();
+      mic.classList.remove('rec');
+      if (done) return;
+      if (alts.some((a) => (' ' + norm(a) + ' ').includes(' ' + norm(word) + ' '))) finish(true);
+      else {
+        tries++;
+        sfx.wrong();
+        ui.feedback(t().tryAgain, 'bad');
+        if (tries >= 2) { say(word, 0.75); row.querySelector('.said').classList.remove('later'); }
+      }
+    };
+    setTimeout(() => say(word, 0.75), 400);
   });
 }
 

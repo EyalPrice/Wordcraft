@@ -10,12 +10,12 @@ function fresh() {
     for (const s of p.surfaces) { bg[s.id] = s.color; tex[s.id] = s.tex; }
     worlds[p.id] = { bg, tex, items: [] };
   }
-  worlds.dressup.char = { skin: '#DDA878', feeling: 'happy', slots: { hair: { id: 'hair', v: 0, color: '#5E3B25' }, top: { id: 'shirt', v: 0, color: '#F7F6F2' }, bottom: { id: 'pants', v: 0, color: '#3E5C8A' } } };
   return {
-    v: 1,
+    v: 2,
     ui: 'he',
     sound: true,
-    levels: { bedroom: 1, dressup: 1, park: 1, track: 1, sentences: 1 },
+    test: false,
+    levels: Object.fromEntries([...PLACES.filter((p) => !p.coloring).map((p) => [p.id, 1]), ['sentences', 1]]),
     placement: { active: true, done: 0, streak: 0 },
     streaks: {},
     fallbacks: {},
@@ -28,9 +28,19 @@ function fresh() {
     successes: 0,
     englishAsked: false,
     worlds,
+    chars: [newChar(1)],
+    charIdx: 0,
+    coloring: {},
+    kidWords: {},
     lastPlace: null,
     uid: 1,
   };
+}
+
+// A character in the character studio. Accessories live with the character.
+export function newChar(n) {
+  return { id: 'c' + Date.now().toString(36) + n, n, skin: '#DDA878', feeling: 'happy', acc: [],
+    slots: { hair: { id: 'hair', v: 0, color: '#5E3B25' }, top: { id: 'shirt', v: 0, color: '#F7F6F2' }, bottom: { id: 'pants', v: 0, color: '#3E5C8A' } } };
 }
 
 export let state = load();
@@ -42,7 +52,9 @@ function load() {
       const s = JSON.parse(raw);
       const base = fresh();
       // Merge so new fields from later versions get defaults.
-      return { ...base, ...s, levels: { ...base.levels, ...s.levels }, worlds: { ...base.worlds, ...s.worlds } };
+      const out = { ...base, ...s, levels: { ...base.levels, ...s.levels }, worlds: { ...base.worlds, ...s.worlds } };
+      if (!out.chars || !out.chars.length) out.chars = [newChar(1)];
+      return out;
     }
   } catch { /* corrupted save: start fresh */ }
   return fresh();
